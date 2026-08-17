@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>GORM V1适配KingbaseES软件概要设计</title>
+<style>
+@page { size: A4; margin: 2.2cm 2.0cm 2.0cm 2.4cm; }
+body { font-family: "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; font-size: 10.5pt; line-height: 1.65; color: #20252b; }
+h1 { font-size: 22pt; text-align: center; margin: 2.5cm 0 0.5cm; color: #17365d; }
+h2 { font-size: 17pt; margin-top: 1.2em; color: #17365d; border-bottom: 1px solid #8ea9c1; padding-bottom: 0.2em; page-break-after: avoid; }
+h3 { font-size: 14pt; margin-top: 1em; color: #244a6b; page-break-after: avoid; }
+h4 { font-size: 12pt; margin-top: 0.8em; color: #315d7d; page-break-after: avoid; }
+h5 { font-size: 11pt; margin-top: 0.7em; page-break-after: avoid; }
+p { margin: 0.45em 0; text-align: justify; }
+ul, ol { margin: 0.4em 0 0.7em 1.6em; }
+li { margin: 0.2em 0; }
+table { width: 100%; border-collapse: collapse; margin: 0.7em 0 1em; page-break-inside: avoid; }
+th, td { border: 1px solid #7f8c98; padding: 0.35em 0.5em; vertical-align: top; }
+th { background: #d9e7f3; font-weight: bold; text-align: center; }
+code { font-family: "Noto Sans Mono CJK SC", "Consolas", monospace; font-size: 9pt; background: #f3f5f7; }
+pre { font-family: "Noto Sans Mono CJK SC", "Consolas", monospace; font-size: 8.5pt; line-height: 1.45; border: 1px solid #aab5bf; background: #f7f9fb; padding: 0.8em; white-space: pre-wrap; page-break-inside: avoid; }
+.cover-subtitle { text-align: center; font-size: 15pt; color: #315d7d; margin-bottom: 2cm; }
+.cover-meta { width: 72%; margin: 0 auto; }
+.cover-meta td:first-child { width: 30%; font-weight: bold; background: #edf3f8; }
+.confidential { text-align: center; margin-top: 3cm; font-size: 9pt; color: #65717c; }
+.page-break { page-break-before: always; }
+.note { border-left: 4px solid #4f81bd; background: #eef5fb; padding: 0.5em 0.8em; margin: 0.8em 0; }
+.decision { border: 2px solid #2f6b4f; background: #edf7f1; padding: 0.65em 0.85em; margin: 0.9em 0; }
+.warning { border-left: 4px solid #b06d1e; background: #fff6e8; padding: 0.5em 0.8em; margin: 0.8em 0; }
+.caption { text-align: center; font-size: 9pt; color: #4d5963; margin-top: 0.2em; }
+.diagram { text-align: center; margin: 1em 0; page-break-inside: avoid; }
+.diagram img { max-width: 95%; height: auto; }
+.flow td { text-align: center; vertical-align: middle; background: #f8fafc; }
+.flow .arrow { border: none; width: 4%; font-size: 15pt; background: white; }
+.layer td:first-child { width: 18%; font-weight: bold; text-align: center; background: #edf3f8; }
+.small { font-size: 9pt; }
+.toc a { color: #20252b; text-decoration: none; }
+.status-yes { color: #1b6b45; font-weight: bold; }
+.status-limit { color: #9a5a12; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<h1>GORM V1适配KingbaseES<br>软件概要设计</h1>
+<p class="cover-subtitle">MySQL兼容模式 / Oracle兼容模式</p>
+
+<table class="cover-meta">
+  <tr><td>文档版本</td><td>V1.0</td></tr>
+  <tr><td>适配对象</td><td>当前工作区GORM V1源码</td></tr>
+  <tr><td>目标数据库</td><td>KingbaseES MySQL兼容模式、Oracle兼容模式</td></tr>
+  <tr><td>设计层次</td><td>第零层总体方案、第一层兼容点分解</td></tr>
+  <tr><td>编制日期</td><td>2026年7月22日</td></tr>
+  <tr><td>交付物</td><td>概要设计文档、系统上下文图、适配源码、测试用例</td></tr>
+</table>
+
+<p class="confidential">本文档用于GORM V1与KingbaseES生态适配项目设计评审和实施验收。</p>
+
+<div class="page-break"></div>
+
+<h2>修订记录</h2>
+<table>
+  <tr><th>版本</th><th>日期</th><th>修订内容</th><th>修订人</th></tr>
+  <tr><td>V1.0</td><td>2026-07-22</td><td>形成第零层和第一层概要设计，覆盖MySQL与Oracle兼容模式。</td><td>项目组</td></tr>
+</table>
+
+<h2>目录</h2>
+<div class="toc">
+  <p><a href="#intro">1 简介</a></p>
+  <p><a href="#references">2 引用文档</a></p>
+  <p><a href="#terms">3 定义与缩略语</a></p>
+  <p><a href="#original">4 原有设计</a></p>
+  <p><a href="#requirements">5 需求对照表</a></p>
+  <p><a href="#overview">6 概要设计</a></p>
+  <p>&nbsp;&nbsp;<a href="#level0">6.1 第零层设计描述</a></p>
+  <p>&nbsp;&nbsp;<a href="#level1">6.2 第一层设计描述</a></p>
+  <p><a href="#reuse">7 制作、购买或复用分析</a></p>
+  <p><a href="#appendix">附录A 兼容矩阵与验收清单</a></p>
+</div>
+
+<div class="page-break"></div>
+
+<h2 id="intro">1 简介</h2>
+
+<h3>1.1 目的</h3>
+<p>本文档给出GORM V1适配KingbaseES MySQL兼容模式和Oracle兼容模式的概要设计。设计将兼容需求映射为明确的软件边界、扩展接口、模块职责、运行流程和测试标准，为开发、评审、联调、验收及后续版本升级提供共同依据。</p>
+<p>本文档重点回答两个层次的问题：第零层确定采用一套代码、多个分支还是插件扩展，以及是否具备社区合入条件；第一层在总体方案下逐项分解连接、类型、SQL、DDL、元数据、事务和测试等兼容点。</p>
+
+<h3>1.2 范围</h3>
+<p>本期范围包括：</p>
+<ul>
+  <li>保留GORM V1既有CRUD、回调、Scope、迁移和事务主流程。</li>
+  <li>通过GORM公开的<code>Dialect</code>接口和<code>RegisterDialect</code>注册机制接入KingbaseES。</li>
+  <li>提供<code>kingbase-mysql</code>和<code>kingbase-oracle</code>两个显式方言入口。</li>
+  <li>适配参数占位符、标识符引用、数据类型、分页、主键回填、DDL和系统目录查询。</li>
+  <li>提供单元、竞态和真实数据库集成测试入口。</li>
+</ul>
+<p>本期不负责把业务应用中的手写SQL自动翻译为另一种数据库语法，也不负责业务模型、业务表结构和业务数据迁移。PG、SQL Server模式虽在当前适配包保留扩展入口，但不属于本期MySQL/Oracle验收范围。</p>
+
+<h3>1.3 设计依据</h3>
+<p>文档结构和深度参考金仓二期PowerJob、Flowable、Trino三个设计文档及甲方批注意见，特别落实以下要求：</p>
+<ul>
+  <li>介绍框架预留的抽象类和接口，说明如何在不侵入核心逻辑的前提下注入数据库能力。</li>
+  <li>说明框架目录结构、一级模块职责和整体主流程。</li>
+  <li>DB相关模块应说明类/文件职责、核心实现、子流程及系统目录查询含义。</li>
+  <li>第零层必须确定总体兼容形态和社区合入策略；第一层必须覆盖全部兼容点。</li>
+  <li>每一个已界定的问题必须有对应方案、责任模块和验收手段。</li>
+</ul>
+
+<h2 id="references">2 引用文档</h2>
+<table>
+  <tr><th>编号</th><th>文档/代码</th><th>用途</th></tr>
+  <tr><td>R-01</td><td>PowerJob设计文档v1.0</td><td>参考第零层、第一层、需求覆盖和方言驱动结构。</td></tr>
+  <tr><td>R-02</td><td>Flowable设计文档V1.0</td><td>参考框架扩展点、DB子流程和系统表语义写法。</td></tr>
+  <tr><td>R-03</td><td>Trino设计文档V0.3</td><td>参考插件方案比较、社区生态位置和模块分解。</td></tr>
+  <tr><td>R-04</td><td>当前工作区GORM V1源码</td><td>确定Dialect、Scope、Callback、AutoMigrate和事务接口。</td></tr>
+  <tr><td>R-05</td><td>KingbaseES Go驱动<code>kingbase.com/gokb</code></td><td>数据库连接、模式感知、参数归一化和结果解码。</td></tr>
+</table>
+
+<h2 id="terms">3 定义与缩略语</h2>
+<table>
+  <tr><th>术语</th><th>说明</th></tr>
+  <tr><td>GORM V1</td><td>Go语言ORM框架。本设计中的核心框架和公开API保持不变。</td></tr>
+  <tr><td>Dialect</td><td>GORM V1预留的数据库方言扩展接口，用于封装不同数据库的SQL差异。</td></tr>
+  <tr><td>Scope</td><td>单次ORM操作的上下文，负责模型、条件、SQL文本和参数的组织。</td></tr>
+  <tr><td>Callback</td><td>GORM V1 CRUD执行管线的可插拔回调机制。</td></tr>
+  <tr><td>KingbaseES模式</td><td>数据库实例启用的SQL兼容模式。本期指MySQL或Oracle模式。</td></tr>
+  <tr><td>系统目录/兼容视图</td><td>用于发现表、列、索引、约束的只读元数据视图，例如<code>information_schema</code>、<code>USER_TABLES</code>。</td></tr>
+  <tr><td>DDL/DML</td><td>数据定义语言/数据操纵语言。</td></tr>
+  <tr><td>LOB</td><td>大对象类型，本设计主要涉及BLOB、CLOB及其读写映射。</td></tr>
+</table>
+
+<h2 id="original">4 原有设计</h2>
+
+<h3>4.1 GORM V1整体设计思想</h3>
+<p>GORM V1采用“公开API + 回调管线 + Scope SQL构造 + Dialect差异注入”的结构。业务代码面向<code>*gorm.DB</code>调用统一API；CRUD操作进入Callback管线；Scope基于模型元数据构建SQL；Dialect只负责与数据库产品相关的部分；最终由<code>database/sql</code>执行。</p>
+<p>与本适配直接相关的框架扩展点如下：</p>
+<table>
+  <tr><th>扩展点</th><th>接口/方法</th><th>框架职责</th><th>适配层职责</th></tr>
+  <tr><td>方言注册</td><td><code>RegisterDialect(name, dialect)</code></td><td>按名称保存方言原型，打开连接时创建实例。</td><td>注册MySQL/Oracle两个明确名称。</td></tr>
+  <tr><td>方言契约</td><td><code>Dialect</code></td><td>定义类型、标识符、分页、迁移和元数据接口。</td><td>实现或委托全部方法，不改变接口。</td></tr>
+  <tr><td>模型类型解析</td><td><code>ParseFieldStructForDialect</code></td><td>解析Go类型和gorm标签。</td><td>把解析结果转换为Kingbase模式类型。</td></tr>
+  <tr><td>SQL上下文</td><td><code>Scope</code></td><td>组合字段、条件、变量和SQL。</td><td>通过Dialect钩子提供差异片段。</td></tr>
+  <tr><td>CRUD生命周期</td><td><code>Callback</code></td><td>编排事务、关联、时间戳、执行和回调。</td><td>不替换核心回调，仅改变方言输出。</td></tr>
+  <tr><td>驱动边界</td><td><code>SQLCommon</code></td><td>统一<code>*sql.DB</code>与<code>*sql.Tx</code>的执行接口。</td><td>由gokb实现协议和参数处理。</td></tr>
+</table>
+
+<h3>4.2 目录结构与一级模块职责</h3>
+<table>
+  <tr><th>目录/文件组</th><th>职责</th><th>与适配关系</th></tr>
+  <tr><td><code>main.go</code></td><td><code>DB</code>门面、Open、CRUD入口、事务和迁移API。</td><td>通过方言名创建适配实例。</td></tr>
+  <tr><td><code>dialect.go</code>、<code>dialect_*.go</code></td><td>方言接口、注册表及原生MySQL/PostgreSQL实现。</td><td>提供标准扩展契约和可复用基线。</td></tr>
+  <tr><td><code>scope.go</code></td><td>表名、字段、条件、参数、查询、DDL和AutoMigrate SQL构造。</td><td>调用<code>Quote</code>、<code>BindVar</code>、<code>DataTypeOf</code>等接口。</td></tr>
+  <tr><td><code>callback*.go</code></td><td>Create/Query/Update/Delete回调链和事务边界。</td><td>保持不变，验证适配SQL可通过既有回调执行。</td></tr>
+  <tr><td><code>model*.go</code>、<code>field.go</code></td><td>模型反射、字段标签、主键和关联关系。</td><td>为类型映射和DDL提供输入。</td></tr>
+  <tr><td><code>kingbase/dialects</code></td><td>Kingbase方言注册、模式分派、类型、DDL和元数据覆盖。</td><td>本期核心实现。</td></tr>
+  <tr><td><code>kingbase/test</code></td><td>各模式真实库集成测试。</td><td>本期验收入口。</td></tr>
+</table>
+
+<h3>4.3 原有核心流程</h3>
+<table class="flow">
+  <tr><td>业务调用<br><code>db.Find/Create/AutoMigrate</code></td><td class="arrow">→</td><td>Callback或迁移入口</td><td class="arrow">→</td><td>Scope构造SQL与参数</td><td class="arrow">→</td><td>Dialect输出差异片段</td><td class="arrow">→</td><td><code>database/sql</code>执行</td></tr>
+</table>
+<p>这一流程说明GORM V1已把数据库差异集中在Dialect接口，适配KingbaseES无需修改业务API、Callback主链和模型反射逻辑。</p>
+
+<h3>4.4 数据表和ER图适用性</h3>
+<div class="note"><strong>结论：</strong>GORM是通用ORM框架，本身不拥有固定业务表，也不定义业务实体之间的ER关系，因此本设计不绘制业务ER图。应用表结构由接入方Go模型决定。适配层只读数据库系统目录，不创建或修改系统目录对象；其查询含义在6.2.3.8逐项说明。</div>
+
+<h2 id="requirements">5 需求对照表</h2>
+<table class="small">
+  <tr><th>需求编号</th><th>需求项</th><th>设计项</th><th>章节</th><th>验收方式</th></tr>
+  <tr><td>REQ-01</td><td>一套GORM V1代码支持KingbaseES MySQL、Oracle模式。</td><td>D0-01 总体架构</td><td>6.1.3</td><td>两个方言入口均可编译、连接和运行。</td></tr>
+  <tr><td>REQ-02</td><td>不侵入GORM核心CRUD流程。</td><td>D0-02 扩展接口复用</td><td>6.1.2、6.1.3</td><td>Dialect接口不变；全仓回归通过。</td></tr>
+  <tr><td>REQ-03</td><td>适配参数、标识符和保留字。</td><td>D1-02 SQL基础语法</td><td>6.2.3.3</td><td>Quote/BindVar单元测试和CRUD集成测试。</td></tr>
+  <tr><td>REQ-04</td><td>适配常用字段类型和自增主键。</td><td>D1-03 类型映射</td><td>6.2.3.4</td><td>模型类型矩阵、建表和读写测试。</td></tr>
+  <tr><td>REQ-05</td><td>适配CRUD、分页、排序、聚合。</td><td>D1-04 DML与分页</td><td>6.2.3.5</td><td>完整CRUD和分页集成测试。</td></tr>
+  <tr><td>REQ-06</td><td>适配AutoMigrate和字段修改。</td><td>D1-05 DDL与迁移</td><td>6.2.3.6</td><td>建表、加列、索引、ModifyColumn测试。</td></tr>
+  <tr><td>REQ-07</td><td>支持主键回填。</td><td>D1-06 主键生成与回填</td><td>6.2.3.7</td><td>Create后主键非零。</td></tr>
+  <tr><td>REQ-08</td><td>正确查询表、列、索引和外键。</td><td>D1-07 元数据</td><td>6.2.3.8</td><td>默认/显式schema和回退测试。</td></tr>
+  <tr><td>REQ-09</td><td>事务行为与GORM V1一致。</td><td>D1-08 事务与异常</td><td>6.2.3.9</td><td>提交/回滚集成测试。</td></tr>
+  <tr><td>REQ-10</td><td>多连接并发不互相污染。</td><td>D1-09 实例隔离</td><td>6.2.3.10</td><td>双连接实例测试和race测试。</td></tr>
+  <tr><td>REQ-11</td><td>支持工程交付和后续升级。</td><td>D1-10 测试与发布</td><td>6.2.3.11</td><td>发布门禁、版本矩阵和CI。</td></tr>
+</table>
+
+<div class="page-break"></div>
+
+<h2 id="overview">6 概要设计</h2>
+
+<h2 id="level0">6.1 第零层设计描述</h2>
+
+<h3>6.1.1 软件系统上下文定义</h3>
+
+<h4>6.1.1.1 系统边界</h4>
+<p>本设计将“GORM V1核心 + Kingbase方言适配包”定义为待设计系统。业务应用、Go标准库<code>database/sql</code>、gokb驱动和KingbaseES数据库属于外部实体或外部依赖。</p>
+<table>
+  <tr><th>实体</th><th>输入/输出</th><th>关系</th></tr>
+  <tr><td>Go业务应用</td><td>模型、gorm标签、CRUD/迁移调用、DSN和显式方言名</td><td>只面向GORM公开API，不感知适配内部实现。</td></tr>
+  <tr><td>GORM V1核心</td><td>统一ORM调用、Scope、Callback、事务和迁移流程</td><td>通过Dialect接口调用Kingbase适配能力。</td></tr>
+  <tr><td>Kingbase方言适配包</td><td>模式相关类型、SQL片段、DDL和元数据查询</td><td>本设计的核心新增模块。</td></tr>
+  <tr><td><code>database/sql</code>与gokb</td><td>连接、参数绑定、执行、结果解码</td><td>连接GORM与KingbaseES。</td></tr>
+  <tr><td>KingbaseES</td><td>MySQL或Oracle兼容模式SQL、业务数据、系统目录</td><td>被适配的目标数据库。</td></tr>
+</table>
+
+<div class="diagram">
+  <img src="../diagram/gorm-v1-kingbase-system-context.png" alt="GORM V1适配KingbaseES系统上下文图">
+  <p class="caption">图6-1 GORM V1适配KingbaseES系统上下文图（可编辑源文件为同目录VSDX）</p>
+</div>
+
+<h4>6.1.1.2 外部接口</h4>
+<table>
+  <tr><th>接口</th><th>形式</th><th>约束</th></tr>
+  <tr><td>业务接入接口</td><td><code>gorm.Open("kingbase-mysql", "kingbase", dsn)</code>或<code>gorm.Open("kingbase-oracle", "kingbase", dsn)</code></td><td>方言名必须与实例<code>database_mode</code>一致。</td></tr>
+  <tr><td>ORM扩展接口</td><td><code>gorm.Dialect</code></td><td>不得增加Kingbase专属方法破坏上游接口。</td></tr>
+  <tr><td>驱动接口</td><td>Go <code>database/sql/driver</code></td><td>驱动名为<code>kingbase</code>，使用gokb。</td></tr>
+  <tr><td>数据库接口</td><td>KingbaseES网络协议和SQL</td><td>实例必须启用目标兼容模式。</td></tr>
+</table>
+
+<h3>6.1.2 设计思路</h3>
+
+<h4>6.1.2.1 设计要点问题界定</h4>
+<ol>
+  <li><strong>总体形态：</strong>一套源码、两套源码、修改核心或插件/方言扩展中选择可维护方案。</li>
+  <li><strong>模式边界：</strong>MySQL和Oracle在引用符、类型、分页、DDL、主键和系统目录上存在差异，不能用一个无边界的SQL替换器处理。</li>
+  <li><strong>扩展机制：</strong>必须复用GORM V1预留的Dialect契约，不改Callback、Scope和业务API。</li>
+  <li><strong>模式选择：</strong>ORM方言选择必须稳定、可测试，并能在配置错误时尽早暴露。</li>
+  <li><strong>社区合入：</strong>实现应与上游公共接口兼容，交付不能依赖上游是否接收。</li>
+  <li><strong>升级和回归：</strong>模式差异需要集中、可追踪，并可分别执行测试。</li>
+</ol>
+
+<h4>6.1.2.2 设计方法选择</h4>
+<p>选择GORM V1提供的Dialect扩展机制。适配包实现完整Dialect契约，并在内部复用成熟的MySQL或PostgreSQL方言作为基线，只覆盖KingbaseES存在差异的行为。</p>
+<p>MySQL模式复用GORM MySQL方言的反引号、问号参数和分页基线；Oracle模式因GORM V1没有内置Oracle方言，复用PostgreSQL的编号参数和<code>RETURNING</code>执行链，再覆盖Oracle标识符、类型、分页、DDL、<code>DUAL</code>和兼容视图查询。</p>
+
+<h4>6.1.2.3 可选方案分析</h4>
+<table>
+  <tr><th>方案</th><th>描述</th><th>优点</th><th>缺点</th><th>结论</th></tr>
+  <tr><td>A 修改GORM核心</td><td>在Scope/Callback中加入Kingbase条件分支。</td><td>短期直接。</td><td>侵入核心、升级困难、难以社区合入、回归范围大。</td><td>不采用</td></tr>
+  <tr><td>B 两套GORM源码</td><td>MySQL和Oracle各维护一个fork。</td><td>模式隔离。</td><td>公共缺陷需重复修复，业务接入和版本管理复杂。</td><td>不采用</td></tr>
+  <tr><td>C 单一方言运行时自动识别</td><td>一个方言名，连接后探测模式并动态分支。</td><td>配置项少。</td><td>GORM <code>SetDB</code>不能返回错误；错误模式可能延迟到业务SQL才暴露；测试边界不清晰。</td><td>不采用</td></tr>
+  <tr><td>D 一套主干 + 独立适配包 + 两个显式方言</td><td>共享公共实现，以明确名称选择MySQL或Oracle策略。</td><td>不改核心、边界清晰、可独立测试、便于升级和分发。</td><td>调用方必须正确选择模式。</td><td><strong>采用</strong></td></tr>
+</table>
+
+<h4>6.1.2.4 社区生态与合入策略</h4>
+<p>适配实现仅使用GORM公开的<code>RegisterDialect</code>和<code>Dialect</code>接口，不改变公共API，技术上可作为独立方言包分发，也具备向上游提交的代码边界。实际是否合入由上游维护策略和评审结果决定，不作为甲方交付前置条件。</p>
+<p>交付时优先保持<code>kingbase/dialects</code>为独立、低耦合模块；若后续拆分为独立Go Module，只需调整导入路径和驱动版本，不改变业务调用模型。</p>
+
+<h3>6.1.3 确定的第零层设计方案</h3>
+<div class="decision"><strong>D0-01方案结论：</strong>采用“一套GORM V1主干 + 一个Kingbase方言扩展包 + 两个显式模式入口”的总体架构。业务通过<code>kingbase-mysql</code>或<code>kingbase-oracle</code>选择策略；适配层不在每条SQL上探测模式；启动验收通过<code>SHOW database_mode</code>校验配置和实例一致性。</div>
+
+<table class="layer">
+  <tr><td>业务API层</td><td>保持<code>*gorm.DB</code>、模型和gorm标签不变。</td></tr>
+  <tr><td>GORM核心层</td><td>复用Open、Callback、Scope、AutoMigrate和Transaction流程。</td></tr>
+  <tr><td>适配路由层</td><td><code>KingbaseDialect</code>集中实现注册、模式路由、公共委托和连接实例隔离。</td></tr>
+  <tr><td>模式策略层</td><td><code>dialect_mysql.go</code>与<code>dialect_oracle.go</code>分别承载模式差异。</td></tr>
+  <tr><td>驱动层</td><td>gokb负责连接、占位符归一化、协议和类型解码。</td></tr>
+  <tr><td>数据库层</td><td>KingbaseES以MySQL或Oracle兼容模式执行SQL。</td></tr>
+</table>
+
+<h3>6.1.4 架构视图</h3>
+
+<h4>6.1.4.1 逻辑视图</h4>
+<table class="flow">
+  <tr><td>GORM API</td><td class="arrow">→</td><td>Callback / Scope</td><td class="arrow">→</td><td>Dialect契约</td><td class="arrow">→</td><td>Kingbase模式策略</td><td class="arrow">→</td><td>gokb / KingbaseES</td></tr>
+</table>
+
+<h4>6.1.4.2 开发视图</h4>
+<pre>gorm-master/
+├── dialect.go, scope.go, callback*.go, main.go   # GORM V1核心，不加入模式分支
+└── kingbase/
+    ├── dialects/
+    │   ├── dialect.go                            # 注册、路由、公共委托、实例隔离
+    │   ├── dialect_mysql.go                      # MySQL模式类型和元数据
+    │   ├── dialect_oracle.go                     # Oracle模式类型、DDL、分页和元数据
+    │   ├── metadata.go                           # information_schema/pg_catalog回退
+    │   └── dialect_test.go                       # SQL Mock与并发边界测试
+    ├── test/
+    │   ├── mysql_test.go                         # MySQL真实库验收
+    │   └── oracle_test.go                        # Oracle真实库验收
+    └── diagram/                                  # 系统上下文图</pre>
+
+<h4>6.1.4.3 运行视图</h4>
+<p>每个<code>gorm.Open</code>创建独立的GORM DB、Kingbase方言和底层基线方言实例。连接池由<code>database/sql</code>管理；事务通过<code>*sql.Tx</code>进入同一<code>SQLCommon</code>边界；方言对象不保存请求级可变状态。</p>
+
+<h4>6.1.4.4 部署视图</h4>
+<p>应用进程静态依赖GORM V1、Kingbase适配包和gokb。应用通过网络连接一个已确定兼容模式的KingbaseES实例。MySQL和Oracle实例应使用独立DSN和独立验收流水线，不允许用PG模式连接替代。</p>
+
+<h4>6.1.4.5 场景视图</h4>
+<p>核心场景包括：应用启动并注册方言、模型CRUD、分页查询、AutoMigrate、表/列/索引检查、事务提交与回滚、Oracle <code>DUAL</code>常量查询。</p>
+
+<h3>6.1.5 设计约束</h3>
+<ul>
+  <li>方言选择必须显式，且必须与<code>SHOW database_mode</code>结果一致。</li>
+  <li>不改变GORM V1 Dialect公共接口和业务API。</li>
+  <li>遵循Go <code>database/sql</code>接口；驱动使用甲方批准的gokb正式版本。</li>
+  <li>Oracle分页、identity、boolean、<code>MODIFY</code>和<code>RETURNING</code>受KingbaseES目标版本及兼容配置影响，必须执行真实库验收。</li>
+  <li>GORM V1 <code>AutoMigrate</code>只创建缺失表/列/索引，不删除列，也不自动完成破坏性结构变更。</li>
+  <li>业务手写Raw SQL不由适配层翻译，调用方应编写目标模式可执行的SQL。</li>
+</ul>
+
+<div class="page-break"></div>
+
+<h2 id="level1">6.2 第一层设计描述</h2>
+
+<h3>6.2.1 设计思路</h3>
+
+<h4>6.2.1.1 兼容点问题分解</h4>
+<table>
+  <tr><th>设计项</th><th>问题</th><th>责任模块</th><th>解决策略</th></tr>
+  <tr><td>D1-01</td><td>方言注册、模式选择和连接生命周期</td><td><code>dialect.go</code></td><td>两个注册名显式选择；启动校验实际模式。</td></tr>
+  <tr><td>D1-02</td><td>参数占位符、标识符和schema引用</td><td>基础方言 + Oracle覆盖</td><td>复用基线BindVar；按模式引用并转义标识符。</td></tr>
+  <tr><td>D1-03</td><td>Go/gorm类型与Kingbase类型差异</td><td><code>dialect_mysql.go</code>、<code>dialect_oracle.go</code></td><td>按模式建立确定性类型映射。</td></tr>
+  <tr><td>D1-04</td><td>分页、常量查询和DML差异</td><td>模式策略</td><td>MySQL LIMIT/OFFSET；Oracle FETCH/OFFSET和DUAL。</td></tr>
+  <tr><td>D1-05</td><td>建表、字段修改、索引</td><td>Scope迁移流程 + Dialect</td><td>DataTypeOf、ModifyColumn和元数据接口协作。</td></tr>
+  <tr><td>D1-06</td><td>自增/identity和主键回填</td><td>类型映射 + Create Callback</td><td>MySQL serial/LastInsertId；Oracle identity/RETURNING链。</td></tr>
+  <tr><td>D1-07</td><td>系统目录结构和schema语义不同</td><td>模式元数据模块</td><td>MySQL使用information_schema；Oracle使用USER_*/ALL_*并回退。</td></tr>
+  <tr><td>D1-08</td><td>事务、错误传播和回滚</td><td>GORM核心 + gokb</td><td>复用SQLCommon和Callback事务边界。</td></tr>
+  <tr><td>D1-09</td><td>多连接共享方言原型导致状态污染</td><td><code>ensureRaw</code></td><td>每个连接反射克隆底层方言原型。</td></tr>
+  <tr><td>D1-10</td><td>版本、发布和回归可控性</td><td>测试与构建</td><td>单元、race、全仓和双模式真实库矩阵。</td></tr>
+</table>
+
+<h4>6.2.1.2 实现原则</h4>
+<ul>
+  <li><strong>公共优先：</strong>模式无关逻辑放在<code>KingbaseDialect</code>，只在存在真实差异时进入模式文件。</li>
+  <li><strong>委托优先：</strong>GORM原生方言已经正确实现的行为直接委托，减少重复代码。</li>
+  <li><strong>显式优先：</strong>方言名和实际数据库模式不一致时失败，不做隐式回退。</li>
+  <li><strong>结构化优先：</strong>使用Dialect和模型解析API生成SQL，不用全局字符串替换。</li>
+  <li><strong>测试隔离：</strong>MySQL和Oracle用例独立运行，失败SQL可定位到具体兼容点。</li>
+</ul>
+
+<h3>6.2.2 整体流程</h3>
+
+<h4>6.2.2.1 方言加载和连接流程</h4>
+<table class="flow">
+  <tr><td>导入<code>kingbase/dialects</code></td><td class="arrow">→</td><td><code>init/Register</code>注册两个方言</td><td class="arrow">→</td><td><code>gorm.Open</code>创建gokb连接</td><td class="arrow">→</td><td><code>newDialect</code>克隆方言</td><td class="arrow">→</td><td><code>SetDB</code>绑定连接并Ping</td></tr>
+</table>
+<ol>
+  <li>应用选择<code>DialectKingbaseMySQL</code>或<code>DialectKingbaseOracle</code>。</li>
+  <li>GORM通过驱动名<code>kingbase</code>调用<code>sql.Open</code>。</li>
+  <li>GORM从注册表创建Kingbase方言实例，适配层再克隆对应的原生基线方言。</li>
+  <li>每个方言实例绑定自己的<code>SQLCommon</code>，避免连接间共享可变DB句柄。</li>
+  <li>集成环境执行<code>SHOW database_mode</code>，不一致时终止测试或应用启动。</li>
+</ol>
+
+<h4>6.2.2.2 CRUD流程</h4>
+<table class="flow">
+  <tr><td>业务模型与条件</td><td class="arrow">→</td><td>CRUD Callback</td><td class="arrow">→</td><td>Scope解析字段/条件</td><td class="arrow">→</td><td>Dialect引用、绑定、分页</td><td class="arrow">→</td><td>gokb执行并Scan</td></tr>
+</table>
+<p>Create时，Callback根据<code>LastInsertIDReturningSuffix</code>决定调用<code>Exec + LastInsertId</code>还是<code>QueryRow + Scan</code>。Query时，Scope在<code>prepareQuerySQL</code>中组合SELECT、条件、排序及分页，结果通过字段映射写回模型。</p>
+
+<h4>6.2.2.3 AutoMigrate流程</h4>
+<table class="flow">
+  <tr><td>读取模型结构</td><td class="arrow">→</td><td>HasTable/HasColumn查询目录</td><td class="arrow">→</td><td>DataTypeOf映射字段</td><td class="arrow">→</td><td>CREATE/ALTER/INDEX</td><td class="arrow">→</td><td>再次查询验证</td></tr>
+</table>
+<p>不存在表时，Scope根据全部普通字段生成CREATE TABLE和主键，并创建标签声明的索引；表存在时仅添加缺失列和索引。显式<code>ModifyColumn</code>由Oracle策略生成<code>ALTER TABLE ... MODIFY ...</code>。</p>
+
+<h4>6.2.2.4 事务流程</h4>
+<table class="flow">
+  <tr><td><code>Begin/BeginTx</code></td><td class="arrow">→</td><td>克隆DB和方言</td><td class="arrow">→</td><td>Dialect绑定<code>*sql.Tx</code></td><td class="arrow">→</td><td>执行CRUD</td><td class="arrow">→</td><td>Commit或Rollback</td></tr>
+</table>
+
+<h3>6.2.3 分解及依赖性描述</h3>
+
+<h4>6.2.3.1 适配注册与路由模块</h4>
+<p><strong>文件：</strong><code>kingbase/dialects/dialect.go</code></p>
+<p><strong>职责：</strong>定义模式和方言常量；注册方言；为各模式选择基线方言；实现公共接口委托；将类型、DDL和元数据调用路由到模式策略。</p>
+<p><strong>关键类/结构：</strong><code>KingbaseDialect</code>保存<code>mode</code>、当前<code>SQLCommon</code>和私有<code>raw Dialect</code>；四个轻量包装类型在<code>SetDB</code>时固定模式。</p>
+<p><strong>设计决定：</strong>未知模式按PG入口构造，但业务接入只使用公开常量；MySQL和Oracle不得通过连接失败自动互相回退。</p>
+
+<h4>6.2.3.2 连接与模式一致性模块</h4>
+<p>GORM的方言名决定ORM SQL策略，gokb读取数据库实际<code>database_mode</code>决定协议类型解码。两者是不同层次，必须一致。集成测试在连接和Ping成功后执行：</p>
+<pre>SHOW database_mode</pre>
+<p>返回值不是期望的<code>mysql</code>或<code>oracle</code>时直接失败，禁止继续执行DDL。生产应用应采用相同的启动健康检查。</p>
+
+<h4>6.2.3.3 参数与标识符模块</h4>
+<table>
+  <tr><th>项目</th><th>MySQL模式</th><th>Oracle模式</th></tr>
+  <tr><td>参数占位符</td><td><code>?</code>，复用MySQL方言；gokb统一处理。</td><td><code>$1、$2...</code>，复用PostgreSQL基线。</td></tr>
+  <tr><td>标识符</td><td>反引号，例如<code>`order`</code>。</td><td>双引号，例如<code>"order"</code>，内部双引号转义。</td></tr>
+  <tr><td>schema表名</td><td>Scope按点分段引用。</td><td>适配层对schema和表名分别清洗、引用。</td></tr>
+  <tr><td>安全边界</td><td colspan="2">业务值必须通过Scope参数绑定；表名、列名来自模型元数据。ModifyColumn的类型字符串是开发期API参数，不允许直接使用终端用户输入。</td></tr>
+</table>
+
+<h4>6.2.3.4 数据类型映射模块</h4>
+<table class="small">
+  <tr><th>Go/gorm类型</th><th>MySQL模式</th><th>Oracle模式</th><th>说明</th></tr>
+  <tr><td>自增int主键</td><td><code>serial</code></td><td><code>integer generated by default as identity</code></td><td>Create后回填主键。</td></tr>
+  <tr><td>自增int64主键</td><td><code>bigserial</code></td><td><code>bigint generated by default as identity</code></td><td>目标版本需验收identity。</td></tr>
+  <tr><td>有符号整数</td><td>MySQL基线类型</td><td><code>number(10)</code>/<code>number(19)</code></td><td>按位宽映射。</td></tr>
+  <tr><td>uint64</td><td><code>numeric(20,0)</code></td><td><code>number(20)</code></td><td>避免溢出。</td></tr>
+  <tr><td>float32/float64</td><td><code>double</code>等基线类型</td><td><code>binary_float</code>/<code>binary_double</code></td><td>显式decimal映射为number。</td></tr>
+  <tr><td>string且size有效</td><td><code>varchar(n)</code></td><td><code>varchar2(n)</code>，n不大于4000</td><td>索引字段应显式给定size。</td></tr>
+  <tr><td>无size长字符串</td><td><code>varchar(255)</code>或text转换</td><td><code>clob</code></td><td>Oracle CLOB不应用普通索引。</td></tr>
+  <tr><td><code>[]byte</code></td><td><code>varbinary/blob</code></td><td><code>blob</code></td><td>由gokb完成值传输。</td></tr>
+  <tr><td><code>time.Time</code></td><td>MySQL日期时间基线</td><td><code>timestamp with time zone</code></td><td>需统一应用时区策略。</td></tr>
+  <tr><td>bool</td><td><code>boolean</code></td><td><code>boolean</code></td><td>Oracle模式目标版本必须实测。</td></tr>
+</table>
+<p>显式<code>gorm:"type:..."</code>标签还会转换常见别名，例如varchar→varchar2、text/json→clob、bytea/binary→blob/raw、decimal/numeric→number。Oracle不支持的行内COMMENT片段从列类型中移除，列注释如有需求应另行执行专用COMMENT语句。</p>
+
+<h4>6.2.3.5 DML、查询与分页模块</h4>
+<table>
+  <tr><th>兼容点</th><th>MySQL模式</th><th>Oracle模式</th></tr>
+  <tr><td>普通CRUD</td><td colspan="2">复用GORM Callback和Scope，适配层提供引用符和参数格式。</td></tr>
+  <tr><td>Limit</td><td><code>LIMIT n</code></td><td><code>FETCH FIRST n ROWS ONLY</code></td></tr>
+  <tr><td>Limit + Offset</td><td><code>LIMIT n OFFSET m</code></td><td><code>OFFSET m ROWS FETCH NEXT n ROWS ONLY</code></td></tr>
+  <tr><td>仅Offset</td><td>原生MySQL方言不输出</td><td><code>OFFSET m ROWS</code></td></tr>
+  <tr><td>常量SELECT</td><td>基线使用<code>FROM DUAL</code></td><td>使用<code>FROM DUAL</code></td></tr>
+  <tr><td>Raw SQL</td><td>调用方提供MySQL模式SQL。</td><td>调用方提供Oracle模式SQL。</td></tr>
+</table>
+<p>limit和offset通过整数解析后拼接，不接受任意SQL文本；负数按GORM“未设置”语义处理。分页结果稳定性由业务查询提供明确ORDER BY保证。</p>
+
+<h4>6.2.3.6 DDL与迁移模块</h4>
+<p>建表和加列由GORM Scope统一生成，差异集中在<code>DataTypeOf</code>。Oracle字段修改单独生成：</p>
+<pre>ALTER TABLE "schema"."table" MODIFY "column" varchar2(128)</pre>
+<p>表、schema和列分别引用，防止保留字和大小写导致语法错误。索引创建仍走GORM公共流程；删除索引复用基线方言。AutoMigrate只做增量补齐，不负责删除字段、数据转换和跨版本迁移脚本。</p>
+
+<h4>6.2.3.7 主键生成与回填模块</h4>
+<p>MySQL模式把常见<code>auto_increment</code>映射为serial/bigserial，Create Callback执行INSERT后从驱动结果读取LastInsertId。Oracle模式用identity类型生成主键，并沿用GORM PostgreSQL基线的<code>RETURNING</code>查询回填链路。</p>
+<div class="warning"><strong>验收要求：</strong>identity语法、RETURNING语法及驱动Scan行为必须在甲方目标KingbaseES版本上联合验证。若目标版本只支持序列方案，应在Oracle策略内集中替换，不得修改业务模型或Create Callback。</div>
+
+<h4>6.2.3.8 元数据发现与系统目录语义</h4>
+<p>GORM Dialect的<code>HasTable/HasColumn/HasIndex/HasForeignKey</code>返回bool，无法直接返回查询错误。因此Oracle路径先查询兼容视图；视图无权限或不存在时回退到Kingbase原生目录；两者都失败时返回false，并由后续DDL执行错误暴露根因。</p>
+<table class="small">
+  <tr><th>功能</th><th>MySQL模式查询对象</th><th>Oracle模式（当前schema）</th><th>Oracle模式（显式schema）</th><th>查询含义</th></tr>
+  <tr><td>HasTable</td><td><code>information_schema.tables</code></td><td><code>user_tables</code></td><td><code>all_tables</code>，owner过滤</td><td>确认目标业务表是否存在，决定CREATE或ALTER路径。</td></tr>
+  <tr><td>HasColumn</td><td><code>information_schema.columns</code></td><td><code>user_tab_columns</code></td><td><code>all_tab_columns</code></td><td>确认模型字段是否已落库，决定是否ADD COLUMN。</td></tr>
+  <tr><td>HasIndex</td><td><code>pg_indexes</code></td><td><code>user_indexes</code></td><td><code>all_indexes</code></td><td>防止AutoMigrate重复创建同名索引。</td></tr>
+  <tr><td>HasForeignKey</td><td><code>information_schema.table_constraints</code></td><td><code>user_constraints</code></td><td><code>all_constraints</code></td><td>筛选<code>constraint_type='R'</code>，确认外键约束是否存在。</td></tr>
+</table>
+<p>所有查询都使用参数绑定，schema、表、列、索引和约束名称不直接拼入WHERE条件。适配层只读这些视图，不执行INSERT、UPDATE或DELETE。</p>
+
+<h4>6.2.3.9 事务与异常处理模块</h4>
+<ul>
+  <li>显式事务通过<code>Begin/BeginTx</code>创建<code>*sql.Tx</code>并重新绑定克隆后的方言。</li>
+  <li>Create/Update/Delete默认Callback在操作前开启事务，根据Scope错误提交或回滚。</li>
+  <li>驱动连接、SQL执行和Scan错误写入<code>DB.Error</code>，保持GORM V1原有错误传播规则。</li>
+  <li>适配层不实现自动重试，避免在非幂等事务中重复执行。连接重试由应用和连接池策略负责。</li>
+</ul>
+
+<h4>6.2.3.10 并发与实例隔离模块</h4>
+<p>GORM注册表中的方言对象是原型。若Kingbase方言直接保存<code>gorm.GetDialect</code>返回的全局MySQL/PostgreSQL对象，后一次<code>SetDB</code>会覆盖前一连接的DB句柄。设计要求<code>ensureRaw</code>按类型反射创建新的基线方言实例，再绑定当前连接。</p>
+<p>该机制保证不同数据库连接、事务克隆和并行测试之间不共享底层方言的可变连接状态。验收包含双连接指针隔离测试和<code>go test -race</code>。</p>
+
+<h4>6.2.3.11 测试、发布与可观测性</h4>
+<table>
+  <tr><th>层级</th><th>覆盖范围</th><th>通过标准</th></tr>
+  <tr><td>单元测试</td><td>模式构造、类型、分页、引用符、DDL、默认/显式schema元数据、回退、连接隔离。</td><td>全部通过，无未满足SQL Mock。</td></tr>
+  <tr><td>竞态测试</td><td>方言注册和多连接使用。</td><td><code>go test -race ./kingbase/dialects</code>通过。</td></tr>
+  <tr><td>MySQL集成测试</td><td>模式校验、DDL、CRUD、分页、聚合、事务、软删除、Raw SQL、类型和约束。</td><td>在MySQL模式实例全部通过。</td></tr>
+  <tr><td>Oracle集成测试</td><td>模式校验、AutoMigrate、目录、索引、ModifyColumn、CRUD、分页、主键、事务、DUAL。</td><td>在Oracle模式实例全部通过。</td></tr>
+  <tr><td>全仓回归</td><td>GORM原有包和Kingbase新增包。</td><td><code>go test ./...</code>通过。</td></tr>
+</table>
+<p>SQL问题定位依赖GORM LogMode和驱动错误。生产日志不得输出明文密码或完整DSN。CI应记录GORM提交、gokb版本、KingbaseES版本、database_mode和失败SQL类别。</p>
+
+<h3>6.2.4 模块依赖关系</h3>
+<pre>业务应用
+  └── GORM V1公开API
+        ├── Callback / Scope / Model metadata
+        └── Dialect接口
+              └── KingbaseDialect公共路由
+                    ├── MySQL模式策略 ──→ GORM MySQL基线
+                    ├── Oracle模式策略 ─→ GORM PostgreSQL基线
+                    └── Metadata回退模块
+                          └── SQLCommon / database/sql
+                                └── gokb
+                                      └── KingbaseES</pre>
+<p>依赖方向单向向下。模式策略不得反向依赖业务模型；MySQL和Oracle策略之间不得互相调用；GORM核心不得依赖Kingbase包。</p>
+
+<h3>6.2.5 主要接口描述</h3>
+<table class="small">
+  <tr><th>接口</th><th>输入</th><th>输出</th><th>调用时机</th></tr>
+  <tr><td><code>NewKingbaseDialect(mode)</code></td><td><code>KbMode</code></td><td><code>gorm.Dialect</code></td><td>测试或外部显式构造。</td></tr>
+  <tr><td><code>SetDB(db)</code></td><td><code>gorm.SQLCommon</code></td><td>无</td><td>Open、clone、BeginTx时绑定连接。</td></tr>
+  <tr><td><code>BindVar(i)</code></td><td>参数序号</td><td>SQL占位符</td><td>Scope添加查询变量。</td></tr>
+  <tr><td><code>Quote(key)</code></td><td>表/列标识符</td><td>模式化引用结果</td><td>所有ORM生成SQL。</td></tr>
+  <tr><td><code>DataTypeOf(field)</code></td><td>模型字段元数据</td><td>Kingbase列类型</td><td>CreateTable、AutoMigrate。</td></tr>
+  <tr><td><code>LimitAndOffsetSQL</code></td><td>limit、offset</td><td>分页SQL片段或错误</td><td>查询SQL末尾。</td></tr>
+  <tr><td><code>ModifyColumn</code></td><td>表、列、目标类型</td><td>执行错误</td><td>显式字段类型修改。</td></tr>
+  <tr><td><code>HasTable/Column/Index/ForeignKey</code></td><td>对象名称</td><td>bool</td><td>迁移和显式元数据检查。</td></tr>
+  <tr><td><code>LastInsertIDReturningSuffix</code></td><td>表和主键列</td><td>主键返回SQL片段</td><td>Create Callback。</td></tr>
+</table>
+
+<h3>6.2.6 影响域分析</h3>
+<table>
+  <tr><th>影响对象</th><th>影响</th><th>控制措施</th></tr>
+  <tr><td>GORM核心</td><td>不增加Kingbase分支，不改变Dialect接口。</td><td>全仓回归。</td></tr>
+  <tr><td>现有MySQL/PostgreSQL用户</td><td>原有方言名和行为保持不变。</td><td>新增方言使用独立名称。</td></tr>
+  <tr><td>业务应用</td><td>需要修改方言名、驱动导入和DSN；Raw SQL可能需要按模式调整。</td><td>接入说明和双模式测试。</td></tr>
+  <tr><td>部署构建</td><td>新增gokb依赖。</td><td>使用正式可访问版本，禁止本机绝对replace进入发布包。</td></tr>
+  <tr><td>数据库</td><td>AutoMigrate可能创建/添加业务对象；元数据查询只读。</td><td>生产禁用未经审批的自动迁移，先做DDL评审。</td></tr>
+</table>
+
+<h3>6.2.7 已知限制和后续扩展</h3>
+<ul>
+  <li>Oracle模式的兼容语法需根据甲方实际KingbaseES小版本形成冻结矩阵。</li>
+  <li>Dialect元数据接口返回bool，不能完整表达权限不足、连接失败与对象不存在三种状态；需要更强诊断时可新增不影响GORM接口的适配包诊断API。</li>
+  <li>复杂Oracle序列、触发器、函数索引、分区表和存储过程不在GORM V1通用AutoMigrate能力内。</li>
+  <li>后续新增模式时应新增独立策略文件、注册名和测试矩阵，不在现有策略内堆叠无关条件分支。</li>
+</ul>
+
+<h2 id="reuse">7 制作、购买或复用分析</h2>
+<table>
+  <tr><th>对象</th><th>策略</th><th>理由</th></tr>
+  <tr><td>GORM V1核心</td><td>复用</td><td>公开Dialect接口已覆盖所需扩展点。</td></tr>
+  <tr><td>GORM MySQL/PostgreSQL方言</td><td>复用并按连接克隆</td><td>减少占位符、通用SQL和命名逻辑重复。</td></tr>
+  <tr><td>Kingbase方言适配</td><td>自研</td><td>类型、DDL和系统目录差异需要项目内实现。</td></tr>
+  <tr><td>gokb驱动</td><td>采购/复用甲方批准版本</td><td>数据库协议和类型解码不应在ORM层重写。</td></tr>
+  <tr><td>业务SQL转换器</td><td>不制作</td><td>超出Dialect职责且字符串替换风险高。</td></tr>
+</table>
+
+<div class="page-break"></div>
+
+<h2 id="appendix">附录A 兼容矩阵与验收清单</h2>
+
+<h3>A.1 兼容能力矩阵</h3>
+<table class="small">
+  <tr><th>能力</th><th>MySQL模式</th><th>Oracle模式</th><th>状态</th></tr>
+  <tr><td>连接与Ping</td><td>gokb</td><td>gokb</td><td class="status-yes">已实现</td></tr>
+  <tr><td>database_mode一致性</td><td>期望mysql</td><td>期望oracle</td><td class="status-yes">集成测试已覆盖</td></tr>
+  <tr><td>CRUD/条件/排序/聚合</td><td>GORM公共流程</td><td>GORM公共流程</td><td class="status-yes">已实现</td></tr>
+  <tr><td>分页</td><td>LIMIT/OFFSET</td><td>FETCH/OFFSET</td><td class="status-limit">Oracle需目标库确认</td></tr>
+  <tr><td>AutoMigrate</td><td>类型覆盖 + information_schema</td><td>类型覆盖 + USER_*/ALL_*</td><td class="status-limit">目标库验收</td></tr>
+  <tr><td>主键回填</td><td>serial + LastInsertId</td><td>identity + RETURNING</td><td class="status-limit">目标库验收</td></tr>
+  <tr><td>事务提交/回滚</td><td>GORM/database.sql</td><td>GORM/database.sql</td><td class="status-yes">用例已提供</td></tr>
+  <tr><td>Raw SQL自动翻译</td><td>不支持</td><td>不支持</td><td>调用方责任</td></tr>
+</table>
+
+<h3>A.2 发布前门禁</h3>
+<ol>
+  <li>将<code>go.mod</code>中本机路径<code>/home/wang/go/src/kingbase.com/gokb</code>替换为甲方可访问的正式版本或内部制品地址。</li>
+  <li>记录GORM提交、gokb版本、KingbaseES版本和实例<code>database_mode</code>。</li>
+  <li>在真实MySQL模式实例执行<code>go test -v ./kingbase/test -run MySQL</code>。</li>
+  <li>在真实Oracle模式实例执行<code>go test -v ./kingbase/test -run Oracle</code>。</li>
+  <li>执行<code>go test ./...</code>、<code>go test -race ./kingbase/dialects</code>和<code>go vet ./kingbase/dialects ./kingbase/test</code>。</li>
+  <li>对甲方业务模型中的实际类型、索引、默认值、Raw SQL和批量写入形成补充用例。</li>
+</ol>
+
+<h3>A.3 设计问题闭环表</h3>
+<table class="small">
+  <tr><th>问题</th><th>方案位置</th><th>代码位置</th><th>验证位置</th></tr>
+  <tr><td>总体采用何种兼容形态</td><td>6.1.2.3、6.1.3</td><td><code>kingbase/dialects</code></td><td>全仓测试</td></tr>
+  <tr><td>如何复用框架扩展点</td><td>4.1、6.1.2.2</td><td><code>dialect.go</code></td><td>接口构造测试</td></tr>
+  <tr><td>如何区分两种模式</td><td>6.2.3.1、6.2.3.2</td><td>两个Dialect常量</td><td>database_mode校验</td></tr>
+  <tr><td>每个SQL差异如何处理</td><td>6.2.3.3至6.2.3.8</td><td>MySQL/Oracle策略文件</td><td>单元与集成测试</td></tr>
+  <tr><td>系统目录查询有何含义</td><td>6.2.3.8</td><td>metadata及模式文件</td><td>元数据SQL Mock</td></tr>
+  <tr><td>并发连接是否安全</td><td>6.2.3.10</td><td><code>ensureRaw</code></td><td>双连接和race测试</td></tr>
+  <tr><td>是否可社区合入</td><td>6.1.2.4</td><td>不改公共接口</td><td>上游评审非交付门禁</td></tr>
+</table>
+
+</body>
+</html>
