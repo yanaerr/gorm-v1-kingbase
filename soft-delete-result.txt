@@ -1,0 +1,287 @@
+# github.com/mattn/go-sqlite3
+sqlite3-binding.c: In function ‘sqlite3SelectNew’:
+sqlite3-binding.c:129019:10: warning: function may return address of local variable [-Wreturn-local-addr]
+129019 |   return pNew;
+       |          ^~~~
+sqlite3-binding.c:128979:10: note: declared here
+128979 |   Select standin;
+       |          ^~~~~~~
+testing mysql...
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[10.09ms][0m  DROP TABLE `users`  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[6.27ms][0m  drop table animals;  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[11.95ms][0m  drop table user_languages;  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[11.75ms][0m  DROP TABLE `shorts`  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[6.57ms][0m  DROP TABLE `really_long_thing_that_references_shorts`  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[12.97ms][0m  DROP TABLE `really_long_table_name_to_test_my_sql_name_length_limits`  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[6.56ms][0m  DROP TABLE `not_so_long_table_names`  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[5.81ms][0m  DROP TABLE `products`  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[7.03ms][0m  DROP TABLE `emails`  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[8.68ms][0m  DROP TABLE `addresses`  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[6.29ms][0m  DROP TABLE `credit_cards`  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[6.43ms][0m  DROP TABLE `companies`  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[6.22ms][0m  DROP TABLE `roles`  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[6.44ms][0m  DROP TABLE `languages`  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[6.48ms][0m  DROP TABLE `hn_posts`  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[7.87ms][0m  DROP TABLE `engadget_posts`  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/main.go:818)[0m 
+[33m[2026-10-18 20:51:42][0m [31;1m Error 1051: Unknown table 'gorm_v1_demo.animals' [0m
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[0.83ms][0m  DROP TABLE `animals`  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/main.go:818)[0m 
+[33m[2026-10-18 20:51:42][0m [31;1m Error 1051: Unknown table 'gorm_v1_demo.users' [0m
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[0.60ms][0m  DROP TABLE `users`  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[7.40ms][0m  DROP TABLE `join_tables`  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[7.62ms][0m  DROP TABLE `posts`  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[12.84ms][0m  DROP TABLE `categories`  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[14.25ms][0m  DROP TABLE `comments`  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[7.10ms][0m  DROP TABLE `cats`  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[6.47ms][0m  DROP TABLE `dogs`  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[11.14ms][0m  DROP TABLE `hamsters`  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[6.79ms][0m  DROP TABLE `toys`  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[5.70ms][0m  DROP TABLE `element_with_ignored_field`  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[5.29ms][0m  DROP TABLE `places`  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[4.04ms][0m  DROP TABLE `pandas`  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[76.17ms][0m  CREATE TABLE `shorts` (`id` bigint AUTO_INCREMENT , PRIMARY KEY (`id`))  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[10.09ms][0m  CREATE TABLE `really_long_thing_that_references_shorts` (`id` bigint AUTO_INCREMENT,`short_id` bigint , PRIMARY KEY (`id`))  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[10.35ms][0m  CREATE TABLE `really_long_table_name_to_test_my_sql_name_length_limits` (`id` bigint AUTO_INCREMENT , PRIMARY KEY (`id`))  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[10.44ms][0m  CREATE TABLE `not_so_long_table_names` (`id` bigint AUTO_INCREMENT,`really_long_thing_id` bigint , PRIMARY KEY (`id`))  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[11.86ms][0m  CREATE TABLE `products` (`id` bigint AUTO_INCREMENT,`code` varchar(255),`price` bigint,`created_at` DATETIME NULL,`updated_at` DATETIME NULL,`after_find_call_times` bigint,`before_create_call_times` bigint,`after_create_call_times` bigint,`before_update_call_times` bigint,`after_update_call_times` bigint,`before_save_call_times` bigint,`after_save_call_times` bigint,`before_delete_call_times` bigint,`after_delete_call_times` bigint , PRIMARY KEY (`id`))  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[8.90ms][0m  CREATE TABLE `emails` (`id` int AUTO_INCREMENT,`user_id` int,`email` varchar(100),`created_at` DATETIME NULL,`updated_at` DATETIME NULL , PRIMARY KEY (`id`))  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[7.80ms][0m  CREATE TABLE `addresses` (`id` int AUTO_INCREMENT,`address1` varchar(255),`address2` varchar(255),`post` varchar(255),`created_at` DATETIME NULL,`updated_at` DATETIME NULL,`deleted_at` DATETIME NULL , PRIMARY KEY (`id`))  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[18.29ms][0m  CREATE TABLE `credit_cards` (`id` tinyint AUTO_INCREMENT,`number` varchar(255),`user_id` bigint,`created_at` DATETIME NOT NULL,`updated_at` DATETIME NULL,`deleted_time` DATETIME NULL , PRIMARY KEY (`id`))  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[9.55ms][0m  CREATE TABLE `companies` (`id` bigint AUTO_INCREMENT,`name` varchar(255) , PRIMARY KEY (`id`))  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[9.32ms][0m  CREATE TABLE `roles` (`name` varchar(256) )  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[13.18ms][0m  CREATE TABLE `user_languages` (`language_id` int unsigned,`user_id` bigint, PRIMARY KEY (`language_id`,`user_id`))  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[10.02ms][0m  CREATE TABLE `languages` (`id` int unsigned AUTO_INCREMENT,`created_at` DATETIME NULL,`updated_at` DATETIME NULL,`deleted_at` DATETIME NULL,`name` varchar(255) , PRIMARY KEY (`id`))  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[12.69ms][0m  CREATE INDEX idx_languages_deleted_at ON `languages`(deleted_at)   
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[12.15ms][0m  CREATE TABLE `hn_posts` (`id` bigint AUTO_INCREMENT,`title` varchar(255),`url` varchar(255),`user_id` varchar(255),`user_name` varchar(255),`user_email` varchar(255),`upvotes` int , PRIMARY KEY (`id`))  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[11.98ms][0m  CREATE TABLE `engadget_posts` (`id` bigint AUTO_INCREMENT,`title` varchar(255),`url` varchar(255),`author_id` varchar(255),`author_name` varchar(255),`author_email` varchar(255),`image_url` varchar(255) , PRIMARY KEY (`id`))  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[9.24ms][0m  CREATE TABLE `animals` (`counter` bigint unsigned AUTO_INCREMENT,`name` varchar(255) DEFAULT 'galeone',`from` varchar(255),`age` DATETIME NULL DEFAULT current_timestamp,`created_at` DATETIME NULL,`updated_at` DATETIME NULL , PRIMARY KEY (`counter`))  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[11.48ms][0m  CREATE TABLE `users` (`id` bigint AUTO_INCREMENT,`age` bigint,`user_num` bigint,`name` varchar(255),`email` varchar(255),`birthday` DATETIME NULL,`created_at` DATETIME NULL,`updated_at` DATETIME NULL,`billing_address_id` bigint,`shipping_address_id` bigint,`latitude` double,`company_id` int,`role` varchar(256),`password` varbinary(255),`password_hash` varbinary(255) , PRIMARY KEY (`id`))  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[10.70ms][0m  CREATE TABLE `join_tables` (`from` bigint unsigned,`to` bigint unsigned,`time` DATETIME NULL DEFAULT  null )  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[11.76ms][0m  CREATE TABLE `posts` (`id` bigint AUTO_INCREMENT,`category_id` bigint,`main_category_id` bigint,`title` varchar(255),`body` varchar(255) , PRIMARY KEY (`id`))  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[11.84ms][0m  CREATE TABLE `categories` (`id` int unsigned AUTO_INCREMENT,`created_at` DATETIME NULL,`updated_at` DATETIME NULL,`deleted_at` DATETIME NULL,`name` varchar(255),`category_id` int unsigned , PRIMARY KEY (`id`))  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[11.09ms][0m  CREATE INDEX idx_categories_deleted_at ON `categories`(deleted_at)   
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[24.29ms][0m  CREATE TABLE `comments` (`id` int unsigned AUTO_INCREMENT,`created_at` DATETIME NULL,`updated_at` DATETIME NULL,`deleted_at` DATETIME NULL,`post_id` bigint,`content` varchar(255) , PRIMARY KEY (`id`))  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:42][0m  [36;1m[6.35ms][0m  CREATE INDEX idx_comments_deleted_at ON `comments`(deleted_at)   
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:43][0m  [36;1m[8.41ms][0m  CREATE TABLE `cats` (`id` int AUTO_INCREMENT,`name` varchar(255) , PRIMARY KEY (`id`))  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:43][0m  [36;1m[10.32ms][0m  CREATE TABLE `dogs` (`id` int AUTO_INCREMENT,`name` varchar(255) , PRIMARY KEY (`id`))  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:43][0m  [36;1m[7.25ms][0m  CREATE TABLE `hamsters` (`id` int AUTO_INCREMENT,`name` varchar(255) , PRIMARY KEY (`id`))  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:43][0m  [36;1m[9.02ms][0m  CREATE TABLE `toys` (`id` int AUTO_INCREMENT,`name` varchar(255),`owner_id` int,`owner_type` varchar(255) , PRIMARY KEY (`id`))  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:43][0m  [36;1m[17.70ms][0m  CREATE TABLE `element_with_ignored_field` (`id` bigint AUTO_INCREMENT,`value` varchar(255) , PRIMARY KEY (`id`))  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:43][0m  [36;1m[9.79ms][0m  CREATE TABLE `places` (`id` bigint AUTO_INCREMENT,`place_address_id` int,`owner_address_id` int , PRIMARY KEY (`id`))  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:43][0m  [36;1m[7.94ms][0m  CREATE TABLE `pandas` (`number` bigint,`name` varchar(255) DEFAULT null )  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:43][0m  [36;1m[9.44ms][0m  CREATE UNIQUE INDEX number ON `pandas`(`number`)   
+[36;31m[0 rows affected or returned ][0m 
+=== RUN   TestSoftDelete
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:43][0m  [36;1m[20.06ms][0m  ALTER TABLE `users` ADD `deleted_at` DATETIME NULL;  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:43][0m  [36;1m[0.43ms][0m  INSERT INTO `users` (`name`,`deleted_at`) VALUES ('soft_delete',NULL)  
+[36;31m[1 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:43][0m  [36;1m[0.64ms][0m  UPDATE `users` SET `deleted_at`='2026-10-18 20:51:43'  WHERE `users`.`deleted_at` IS NULL AND `users`.`id` = 1  
+[36;31m[1 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:43][0m  [36;1m[0.43ms][0m  SELECT * FROM `users`  WHERE `users`.`deleted_at` IS NULL AND ((name = 'soft_delete')) ORDER BY `users`.`id` ASC LIMIT 1  
+[36;31m[0 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:43][0m  [36;1m[0.52ms][0m  SELECT * FROM `users`  WHERE (name = 'soft_delete') ORDER BY `users`.`id` ASC LIMIT 1  
+[36;31m[1 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:43][0m  [36;1m[0.32ms][0m  DELETE FROM `users`  WHERE `users`.`id` = 1  
+[36;31m[1 rows affected or returned ][0m 
+
+[35m(/home/wang/sthb/gorm-master/scope.go:1055)[0m 
+[33m[2026-10-18 20:51:43][0m  [36;1m[0.34ms][0m  SELECT * FROM `users`  WHERE (name = 'soft_delete') ORDER BY `users`.`id` ASC LIMIT 1  
+[36;31m[0 rows affected or returned ][0m 
+--- PASS: TestSoftDelete (0.03s)
+PASS
+ok  	github.com/jinzhu/gorm	0.725s
