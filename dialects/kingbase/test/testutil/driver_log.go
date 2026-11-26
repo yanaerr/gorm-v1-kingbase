@@ -37,8 +37,8 @@ type driverCall struct {
 	args  []interface{}
 }
 
-// DriverLog observes database/sql's driver boundary without modifying GORM or
-// gokb. Successful calls stay quiet; errors remain available for test verdicts.
+// DriverLog 在不修改 GORM 或 gokb 的前提下观察 database/sql 驱动边界。
+// 成功调用保持静默，错误保留给测试判定。
 type DriverLog struct {
 	mu            sync.Mutex
 	tb            interface{ Logf(string, ...interface{}) }
@@ -78,15 +78,15 @@ func (l *DriverLog) Snapshot() int {
 	return len(l.events)
 }
 
-// DriverSQLResult is the actual driver return for a completed SQL call.
+// DriverSQLResult 表示一次已完成 SQL 调用的真实驱动返回结果。
 type DriverSQLResult struct {
 	Operation string
 	SQL       string
 	Err       error
 }
 
-// SQLResults returns a copy of the SQL calls since Snapshot. Focused diagnostic
-// tests can show their target SQL without enabling verbose logging globally.
+// SQLResults 返回自 Snapshot 以来 SQL 调用的副本，使定向诊断测试无需开启全局详细日志
+// 也能展示目标 SQL。
 func (l *DriverLog) SQLResults(since int) []DriverSQLResult {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -99,8 +99,8 @@ func (l *DriverLog) SQLResults(since int) []DriverSQLResult {
 	return results
 }
 
-// WithExpectedError labels matching errors during run as intentional. The test
-// must still verify the returned error and acknowledge it with ExpectErrors.
+// WithExpectedError 将运行期间匹配的错误标记为预期错误；测试仍须验证返回错误，
+// 并通过 ExpectErrors 明确认领。
 func (l *DriverLog) WithExpectedError(match func(error) bool, run func() error) error {
 	l.mu.Lock()
 	previous := l.expectedError
@@ -229,8 +229,8 @@ func driverErrorMessage(err error) string {
 	return fmt.Sprintf("%v (%T)", err, err)
 }
 
-// ExpectErrors only acknowledges errors verified by the test as intentional.
-// Unrelated driver errors remain failures, even if GORM drops their return value.
+// ExpectErrors 只认领已由测试验证为预期的错误；即使 GORM 丢弃了返回值，
+// 无关驱动错误仍必须判为失败。
 func (l *DriverLog) ExpectErrors(since int, match func(error) bool) int {
 	l.mu.Lock()
 	var ids []uint64

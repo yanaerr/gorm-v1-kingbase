@@ -76,8 +76,8 @@ func (officialMigrationLongSourceShortTarget) TableName() string {
 	return "kb_really_long_thing_that_references_short_target"
 }
 
-// TestOfficialMigrationRemainingCoverage maps every migration_test.go case to
-// an explicit Kingbase subtest, including the MySQL-only prefix-index branch.
+// TestOfficialMigrationRemainingCoverage 将 migration_test.go 的每个场景映射为明确的
+// KingbaseES 子测试，包括仅 MySQL 支持的前缀索引分支。
 func TestOfficialMigrationRemainingCoverage(t *testing.T) {
 	forEachMode(t, func(t *testing.T, mode kb.KbMode) {
 		db := openOfficialCoverageDB(t, mode)
@@ -106,7 +106,7 @@ func TestOfficialMigrationRemainingCoverage(t *testing.T) {
 			if !db.Dialect().HasColumn((officialMigrationRemainingV2{}).TableName(), "description") {
 				t.Fatal("AutoMigrate did not add description")
 			}
-			// Repeating AutoMigrate is part of the upstream idempotency contract.
+			// 重复执行 AutoMigrate 属于上游幂等性契约的一部分。
 			if err := db.AutoMigrate(&officialMigrationRemainingV2{}).Error; err != nil {
 				t.Fatalf("idempotent automigrate: %v", err)
 			}
@@ -215,9 +215,8 @@ WHERE a.attrelid=to_regclass(?) AND a.attname='description' AND NOT a.attisdropp
 			if err := db.Model(&officialMigrationRemainingChild{}).AddForeignKey("parent_id", parentTable+"(id)", "CASCADE", "CASCADE").Error; err != nil {
 				t.Fatalf("add foreign key: %v", err)
 			}
-			// GORM derives the physical constraint name. HasForeignKey accepts
-			// that generated name on both Kingbase dialects; retain a direct
-			// metadata assertion when the explicit helper is available.
+			// GORM 推导物理约束名称；两种 KingbaseES 方言的 HasForeignKey 都接受该生成名称。
+			// 显式辅助方法可用时保留直接元数据断言。
 			_ = name
 			parent := officialMigrationRemainingParent{Name: "parent"}
 			if err := db.Create(&parent).Error; err != nil {
@@ -267,8 +266,7 @@ WHERE a.attrelid=to_regclass(?) AND a.attname='description' AND NOT a.attisdropp
 			table := testutil.UniqueTable("kb_migration_options")
 			options := ""
 			if mode == kb.KbModeMySQL {
-				// Keep the option conservative: Kingbase MySQL mode accepts an
-				// empty option even on releases that do not expose MySQL engines.
+				// 选项保持保守：即使某些版本不公开 MySQL engine，KingbaseES MySQL 模式也接受空选项。
 				options = ""
 			}
 			if err := db.Table(table).Set("gorm:table_options", options).CreateTable(&officialMigrationRemainingV1{}).Error; err != nil {

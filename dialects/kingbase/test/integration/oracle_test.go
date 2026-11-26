@@ -244,8 +244,8 @@ func TestKingbaseOracleMode_QualifiedIndexMetadata(t *testing.T) {
 	t.Logf("[通过] schema 限定索引查询：table=%s index=%s", qualifiedTable, qualifiedIndex)
 }
 
-// Each query checks one function with fixed inputs. Date results are compared
-// with typed literals so a failed TO_CHAR does not hide other date functions.
+// 每条查询使用固定输入检查一个函数；日期结果与带类型字面量比较，避免 TO_CHAR 失败
+// 遮蔽其他日期函数。
 func TestKingbaseOracleMode_FunctionCompatibility(t *testing.T) {
 	startOracleTestPhase(t, "Oracle 函数兼容性专项")
 	db := openKBOracle(t)

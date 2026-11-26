@@ -4,8 +4,8 @@ import (
 	"database/sql"
 )
 
-// A connection observer can capture errors that the bool-only GORM V1
-// metadata interface cannot return. GORM itself remains unchanged.
+// 连接观察器用于保存 GORM V1 仅返回 bool 的元数据接口无法携带的原始错误，
+// 整个过程无需修改 GORM 主框架。
 func (k *KingbaseDialect) reportError(err error) {
 	if err != nil {
 		if observer, ok := k.db.(interface{ ReportMetadataError(error) }); ok {
@@ -15,6 +15,7 @@ func (k *KingbaseDialect) reportError(err error) {
 }
 
 func (k *KingbaseDialect) queryCount(query string, args ...interface{}) (int, error) {
+	// 所有 Has* 查询统一经过该入口，保证连接不可用和 Scan 错误都能旁路上报。
 	if k.db == nil {
 		k.reportError(sql.ErrConnDone)
 		return 0, sql.ErrConnDone
@@ -26,6 +27,7 @@ func (k *KingbaseDialect) queryCount(query string, args ...interface{}) (int, er
 }
 
 func (k *KingbaseDialect) currentSchema() (name string) {
+	// current_schema() 同时遵循会话 search_path，适合隔离测试和多 schema 应用。
 	if k.db == nil {
 		return ""
 	}
@@ -33,8 +35,9 @@ func (k *KingbaseDialect) currentSchema() (name string) {
 	return
 }
 
-// MySQL-compatible metadata queries for Kingbase MySQL mode.
+// 以下方法使用 KingbaseES MySQL 模式可用的系统目录查询元数据。
 func (k *KingbaseDialect) hasTableMySQLCompat(tableName string) bool {
+	// 显式 schema 直接按限定名称查询；未限定时严格限制到 current_schema()。
 	schema, name := splitSchemaTable(tableName)
 	var (
 		count int
@@ -79,6 +82,7 @@ func (k *KingbaseDialect) hasIndexMySQLCompat(tableName, indexName string) bool 
 	schema, name := splitSchemaTable(tableName)
 	indexSchema, indexName := splitSchemaTable(indexName)
 	if indexSchema != "" && schema != "" && indexSchema != schema {
+		// 表和索引都显式限定但 schema 不一致时，不跨 schema 查找同名索引。
 		return false
 	}
 	if schema == "" {
@@ -103,6 +107,7 @@ func (k *KingbaseDialect) hasIndexMySQLCompat(tableName, indexName string) bool 
 }
 
 func (k *KingbaseDialect) hasForeignKeyMySQLCompat(tableName, foreignKeyName string) bool {
+	// 只接受 FOREIGN KEY 类型，避免与同名唯一约束或检查约束混淆。
 	schema, name := splitSchemaTable(tableName)
 	foreignKeyName = cleanIdentifier(foreignKeyName)
 	var (

@@ -15,8 +15,8 @@ import (
 	"kingbase.com/gokb"
 )
 
-// Each case starts at the caller's ORM API/type tag. No test-side replacement
-// SQL or retry is used to make an unsupported caller definition pass.
+// 每个场景都从调用方 ORM API 和类型标签进入，不使用测试侧替换 SQL 或重试来掩盖
+// 不受支持的调用方定义。
 func TestKingbaseMySQLMode_AdapterBoundaries(t *testing.T) {
 	cases := []mysqlDDLTestCase{
 		{"01_OffsetWithoutLimit", "ORM 独立 Offset", mysqlAdapterOffset},
@@ -100,8 +100,8 @@ func mysqlAdapterQuotedIdentifiers(c *mysqlDDLCase) {
 	c.count("原记录仍在", "SELECT COUNT(*) FROM "+c.quote(table)+" WHERE id = 1", 1)
 }
 
-// A runtime struct keeps the supplied GORM type tag unchanged while sharing
-// the same schema and boundary assertions across the supported type families.
+// 运行时结构体保持传入的 GORM 类型标签不变，并在各受支持类型族之间复用相同的
+// schema 和边界断言。
 func mysqlAdapterValue(typ string, value interface{}) interface{} {
 	kind := reflect.TypeOf(value)
 	model := reflect.New(reflect.StructOf([]reflect.StructField{{Name: "Value", Type: kind, Tag: reflect.StructTag(`gorm:"column:value;type:` + typ + `"`)}}))

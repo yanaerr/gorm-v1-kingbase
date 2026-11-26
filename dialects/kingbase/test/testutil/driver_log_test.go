@@ -17,8 +17,7 @@ import (
 	"kingbase.com/gokb"
 )
 
-// This reporter lets tests verify a failing conclusion without failing the
-// surrounding Go test deliberately.
+// 此报告器允许测试验证失败结论，而无需故意令外层 Go 测试失败。
 type recordedConclusion struct {
 	failed bool
 	lines  []string
@@ -254,7 +253,7 @@ func TestDriverLogExpectedErrorLabelsAreScoped(t *testing.T) {
 			if err != test.err || len(output.lines) == 0 || !strings.HasPrefix(output.lines[0], "["+test.wantLabel+" #") {
 				t.Fatalf("error=%v; output=%v", err, output.lines)
 			}
-			// A label alone must never acknowledge an error or allow a pass.
+			// 仅有标签绝不能认领错误或让测试通过。
 			unverified := &recordedConclusion{}
 			log.Check(unverified, start)
 			if !unverified.failed {
@@ -263,7 +262,7 @@ func TestDriverLogExpectedErrorLabelsAreScoped(t *testing.T) {
 			if count := log.ExpectErrors(start, match); count != test.wantCount {
 				t.Fatalf("acknowledged %d errors, want %d", count, test.wantCount)
 			}
-			// The same error outside the duplicate insertion must lose the label.
+			// 相同错误若发生在重复插入之外，必须失去该标签。
 			before := len(output.lines)
 			log.finish(99, "Exec", "INSERT", test.err)
 			if !strings.HasPrefix(output.lines[before], "[金仓错误 #") {
@@ -357,7 +356,7 @@ func TestDriverLogRecordsReadAndResultErrors(t *testing.T) {
 				mock.ExpectBegin()
 				mock.ExpectExec("INSERT").WillReturnResult(sqlmock.NewErrorResult(failure))
 				mock.ExpectCommit()
-				// GORM V1 ignores RowsAffected's error on this create path.
+				// GORM V1 在此 Create 路径上会忽略 RowsAffected 返回的错误。
 				if err := db.Table("users").Create(&metadataTestRow{ID: 1}).Error; err != nil && err != failure {
 					t.Fatalf("unexpected GORM error: %v", err)
 				}

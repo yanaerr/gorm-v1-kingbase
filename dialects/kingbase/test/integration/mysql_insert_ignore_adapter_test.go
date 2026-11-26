@@ -25,8 +25,8 @@ type mysqlIgnoreAdapterRow struct {
 func (r *mysqlIgnoreAdapterRow) BeforeCreate() error { r.BeforeCalls++; return nil }
 func (r *mysqlIgnoreAdapterRow) AfterCreate() error  { r.AfterCalls++; return nil }
 
-// The transaction owns every object in a fresh schema and rolls it all back.
-// It checks both ignored duplicates and successful generated-ID returning.
+// 事务独占全新 schema 中的全部对象，并在结束时统一回滚；同时验证忽略重复记录和
+// 成功插入后的生成主键回填。
 func TestKingbaseMySQLMode_InsertIgnoreAdapter(t *testing.T) {
 	db := testutil.OpenLogged(t, kb.KbModeMySQL)
 	defer testutil.Close(t, db)
@@ -105,7 +105,7 @@ func TestKingbaseMySQLMode_InsertIgnoreAdapter(t *testing.T) {
 		t.Fatalf("isolated schema still exists: count=%d error=%v", count, err)
 	}
 	if log := testutil.DriverLogFor(db); log != nil {
-		// Success is only meaningful if the driver itself returned no error.
+		// 只有驱动本身未返回错误时，执行成功才有意义。
 		for _, result := range log.SQLResults(0) {
 			if result.Err != nil {
 				t.Fatalf("unexpected Kingbase driver error: %v; SQL=%s", result.Err, result.SQL)

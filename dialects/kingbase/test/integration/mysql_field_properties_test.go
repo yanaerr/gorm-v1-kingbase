@@ -72,7 +72,7 @@ func mysqlPropertyDefaults(c *mysqlDDLCase) {
 	if first.Ready != "READY" || first.Text != "LONGTEXT" || first.Auto != "AUTO_INCREMENT" {
 		c.t.Errorf("[未通过] ORM 默认值回填：%+v", first)
 	}
-	// Explicit omission proves database defaults, independently of ORM reload.
+	// 显式省略字段可直接验证数据库默认值，不依赖 ORM 回读。
 	if !c.statement("省略列触发数据库默认值", "INSERT INTO "+c.quote(table)+" (id) VALUES (2)") {
 		return
 	}
@@ -119,7 +119,7 @@ func mysqlPropertyEnumDistinct(c *mysqlDDLCase) {
 }
 
 func mysqlPropertyEnumCase(c *mysqlDDLCase, model interface{}, members []string) {
-	// Creation uses the supplied enum tag; these rows only carry INSERT/read data.
+	// 建表使用传入的 enum 标签；这些记录只承载 INSERT 和读取数据。
 	type row struct {
 		ID     int    `gorm:"primary_key;AUTO_INCREMENT:false"`
 		Choice string `gorm:"default:'READY'"`
@@ -152,8 +152,8 @@ func mysqlPropertyEnumCase(c *mysqlDDLCase, model interface{}, members []string)
 			c.t.Errorf("[未通过] 清理本用例 ENUM 类型: %v", err)
 		}
 	}()
-	// Kingbase uses 'l' for its inline MySQL enum and 'e' for a standard enum.
-	// The exact members/order and round-trip assertions below remain mandatory.
+	// KingbaseES 使用 'l' 表示内联 MySQL enum，使用 'e' 表示标准 enum；
+	// 下方对成员、顺序和往返读写的精确断言仍是必需项。
 	if kind != "e" && kind != "l" {
 		c.t.Errorf("[未通过] 实际类型不是 ENUM：kind=%s；type=%s.%s", kind, namespace, name)
 	}
@@ -242,7 +242,7 @@ func mysqlPropertyAutoNull(c *mysqlDDLCase) {
 			return
 		}
 	}
-	// A true AUTO_INCREMENT column must generate a value for explicit NULL.
+	// 真正的 AUTO_INCREMENT 列在显式传入 NULL 时也必须生成值。
 	type nullRow struct {
 		ID     int `gorm:"primary_key;AUTO_INCREMENT:false"`
 		Ticket *uint32

@@ -65,8 +65,7 @@ func (c *mysqlDDLCase) prepare(query string, args ...interface{}) {
 	}
 }
 
-// Only the selected operation's SQL is shown. Setup, metadata and successful
-// queries stay quiet. Driver failures already include their SQL in DriverLog.
+// 只输出目标操作的 SQL；准备、元数据和成功查询保持静默，驱动失败的 SQL 已由 DriverLog 记录。
 func (c *mysqlDDLCase) operation(name string, run func() error) bool {
 	c.t.Helper()
 	return c.observeOperation(name, "Exec", run)
@@ -82,8 +81,8 @@ func (c *mysqlDDLCase) observeOperation(name, operation string, run func() error
 		if result.Err != nil {
 			failures++
 		}
-		// Successful sequence maintenance is internal to Create. Keep target
-		// DDL/INSERT output readable, and never count maintenance as the target.
+		// 成功的序列维护属于 Create 内部步骤。保持目标 DDL/INSERT 输出清晰，
+		// 且不把维护语句计入目标操作。
 		maintenance := strings.HasPrefix(result.SQL, "SELECT pg_advisory_xact_lock(") || strings.HasPrefix(result.SQL, "SELECT setval(")
 		if result.Operation == operation && !maintenance {
 			executions++
@@ -167,8 +166,7 @@ func mysqlDDLMatchesError(err error, code, table, constraint, column string) boo
 		(constraint == "" || e.Constraint == constraint) && (column == "" || e.Column == column)
 }
 
-// A negative probe matches the exact error code and target object. Successful
-// execution is returned to the caller for an explicit semantic assertion.
+// 反向探针精确匹配错误码和目标对象；执行成功时交给调用方做明确的语义断言。
 func (c *mysqlDDLCase) reject(name, code, table, constraint, column, query string, args ...interface{}) bool {
 	c.t.Helper()
 	log := testutil.DriverLogFor(c.db)
@@ -194,8 +192,7 @@ type mysqlDDLTestCase struct {
 	run         func(*mysqlDDLCase)
 }
 
-// Keep actual ORM calls as the adaptation acceptance path. Raw MySQL probes
-// and official Kingbase reference queries have separate test entry points.
+// 适配验收始终走真实 ORM 调用；原始 MySQL 探针和 KingbaseES 官方参考查询使用独立测试入口。
 func TestKingbaseMySQLMode_DDLStep1(t *testing.T) {
 	runMySQLDDLCases(t, "ORM 适配验收：通过真实 ORM 调用生成 SQL", []mysqlDDLTestCase{
 		{"02_ORMRemoveIndex", "ORM 删除索引", mysqlDDLORMRemoveIndex},
@@ -285,8 +282,8 @@ func mysqlDDLNotNull(c *mysqlDDLCase) {
 		return
 	}
 	c.count("字段定义为非空", "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = ? AND table_name = ? AND column_name = 'qty' AND is_nullable = 'NO'", 1, c.schema, table)
-	// The documented MySQL mode may coerce explicit NULL to a non-null default.
-	// Record that branch instead of assuming native MySQL strict-mode behavior.
+	// 文档描述的 MySQL 模式可能把显式 NULL 转换为非空默认值；记录该分支，
+	// 不假设原生 MySQL 严格模式行为。
 	rejected := c.reject("非空列 NULL 探测", "23502", table, "", "qty", "INSERT INTO "+c.quote(table)+" (id, qty) VALUES (2, NULL)")
 	if rejected {
 		c.count("拒绝后没有写入记录", "SELECT COUNT(*) FROM "+c.quote(table)+" WHERE id = 2", 0)

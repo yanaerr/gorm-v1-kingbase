@@ -16,14 +16,17 @@ import (
 
 const dialectKingbaseMySQL = "kingbase-mysql"
 
-// KingbaseDialect proxies a real GORM dialect and can override behavior by mode.
+// KingbaseDialect 包装一个真实的 GORM 方言，并在 KingbaseES MySQL 模式下覆盖差异行为。
 type KingbaseDialect struct {
-	mode            KbMode
-	db              gorm.SQLCommon
-	raw             gorm.Dialect
+	// mode 记录已选择的兼容模式；db 是当前连接；raw 是被复用的原生 MySQL 方言克隆。
+	mode KbMode
+	db   gorm.SQLCommon
+	raw  gorm.Dialect
+	// identifierLimit 按连接缓存 max_identifier_length，避免每次生成名称都访问数据库。
 	identifierLimit *mysqlIdentifierLimit
 }
 
+// ensureRaw 延迟创建原生 MySQL 方言克隆，只复用 GORM 已有的通用 MySQL 行为。
 func (k *KingbaseDialect) ensureRaw() {
 	if k.raw != nil {
 		return
@@ -34,8 +37,7 @@ func (k *KingbaseDialect) ensureRaw() {
 		panic(fmt.Sprintf("raw dialect not registered: %s", rawName))
 	}
 
-	// Registered GORM dialects are prototypes. Clone the prototype so SetDB on
-	// one Kingbase connection cannot overwrite another connection's DB handle.
+	// GORM 注册的是方言原型。这里克隆原型，避免一个连接执行 SetDB 时覆盖其他连接的句柄。
 	typ := reflect.TypeOf(prototype)
 	if typ.Kind() == reflect.Ptr {
 		typ = typ.Elem()
@@ -47,9 +49,12 @@ func (k *KingbaseDialect) ensureRaw() {
 	k.raw = raw
 }
 
+// 下列方法构成 GORM V1 Dialect 接口：KingbaseES 存在差异的部分在本类型内实现，
+// 语义一致的部分委托给当前连接独占的原生 MySQL 方言克隆。
 func (*KingbaseDialect) GetName() string { return dialectKingbaseMySQL }
 
 func (k *KingbaseDialect) SetDB(db gorm.SQLCommon) {
+	// 每个新连接使用独立的标识符长度缓存，并把同一连接传给原生方言克隆。
 	k.db = db
 	k.identifierLimit = &mysqlIdentifierLimit{}
 	k.ensureRaw()
@@ -93,6 +98,7 @@ func (k *KingbaseDialect) ModifyColumn(tableName string, columnName string, typ 
 	if k.db == nil {
 		return sql.ErrConnDone
 	}
+	// GORM 传入的表名和列名已经按当前方言引用，此处只拼接 R3 支持的 MODIFY COLUMN 语法。
 	query := "ALTER TABLE " + tableName + " MODIFY COLUMN " + columnName + " " + strings.TrimSpace(typ)
 	_, err := k.db.Exec(query)
 	return err
@@ -123,6 +129,7 @@ func (k *KingbaseDialect) DefaultValueStr() string {
 }
 
 func (k *KingbaseDialect) NormalizeIndexAndColumn(indexName, columnName string) (string, string) {
+	// 先复用 GORM MySQL 对前缀长度等列定义的归一化，再单独处理 schema 限定索引名。
 	k.ensureRaw()
 	index, column := k.raw.NormalizeIndexAndColumn(indexName, columnName)
 	schema, name := splitSchemaTable(index)
@@ -137,6 +144,8 @@ func (k *KingbaseDialect) CurrentDatabase() string {
 	if k.db == nil {
 		return ""
 	}
+	// KingbaseES 优先使用 current_schema()；未取得名称时保留上游返回路径，
+	// 查询错误仍已由元数据观察器独立记录，不会在此静默丢失。
 	if name := k.currentSchema(); name != "" {
 		return name
 	}
@@ -146,12 +155,15 @@ func (k *KingbaseDialect) CurrentDatabase() string {
 
 type kingbaseMySQLDialect struct{ KingbaseDialect }
 
+// SetDB 固定内部模式后再绑定连接，供统一方言安全识别当前委托类型。
 func (d *kingbaseMySQLDialect) SetDB(db gorm.SQLCommon) {
 	d.mode = KbModeMySQL
 	d.KingbaseDialect.SetDB(db)
 }
 
 func limitAndOffsetMySQLCompat(limit, offset interface{}) (string, error) {
+	// 沿用 MySQL 分页语法；只有 OFFSET 时使用最大无符号值作为 LIMIT，
+	// 这是 MySQL 兼容语法表达“跳过后返回其余全部记录”的标准形式。
 	var query string
 	for _, item := range []struct {
 		keyword string
@@ -171,9 +183,8 @@ func limitAndOffsetMySQLCompat(limit, offset interface{}) (string, error) {
 	return query, nil
 }
 
-// Kingbase drops an index by its (optionally schema-qualified) name. MySQL's
-// ON table suffix is not part of this syntax. Inherit the table's schema when
-// the caller supplies an unqualified index name.
+// KingbaseES 通过索引名称（可带 schema）删除索引，不接受 MySQL 的 ON 表名后缀。
+// 调用方未指定索引 schema 时继承表的 schema，确保限定名称落在同一命名空间。
 func (k *KingbaseDialect) removeIndexMySQLCompat(tableName, indexName string) error {
 	schema, index := splitSchemaTable(indexName)
 	if schema == "" {
@@ -188,6 +199,7 @@ func (k *KingbaseDialect) removeIndexMySQLCompat(tableName, indexName string) er
 }
 
 func (k *KingbaseDialect) BuildKeyName(kind, tableName string, fields ...string) string {
+	// 先使用 GORM 默认命名规则，只有超出实例边界时才缩短，保证短名称与上游一致。
 	k.ensureRaw()
 	name := k.raw.BuildKeyName(kind, tableName, fields...)
 	if len(name) <= 63 {
@@ -197,17 +209,18 @@ func (k *KingbaseDialect) BuildKeyName(kind, tableName string, fields ...string)
 }
 
 func quoteMySQLIdentifier(name string) string {
+	// MySQL 标识符中的反引号通过双写转义。
 	return "`" + strings.ReplaceAll(name, "`", "``") + "`"
 }
 
+// mysqlIdentifierLimit 保存单个连接的标识符字节上限查询结果。
 type mysqlIdentifierLimit struct {
 	once  sync.Once
 	bytes int
 }
 
-// Read the actual instance limit only when a generated name needs it. The
-// Dialect interface cannot return an error here; observers still receive any
-// configuration-query failure. Disconnected SQL generation uses 63 bytes.
+// 仅当自动名称确实超过默认边界时查询实例的实际长度限制。Dialect 接口无法在此返回错误，
+// 因此查询失败仍通过元数据观察器上报；脱离连接生成 SQL 时按 63 字节处理。
 func (k *KingbaseDialect) mysqlIdentifierBytes() int {
 	if k.db == nil || k.identifierLimit == nil {
 		return 63
@@ -228,11 +241,11 @@ func (k *KingbaseDialect) mysqlIdentifierBytes() int {
 }
 
 func shortenMySQLKeyName(name string, limit int) string {
+	// 长度按数据库标识符字节数计算，并在 UTF-8 字符边界处截断前缀。
 	if len(name) <= limit {
 		return name
 	}
-	// Preserve a hash of the whole name, including the part beyond the limit.
-	// Cutting only the prefix would make similarly named objects collide.
+	// 哈希覆盖完整原始名称（包括截断位置之后的内容），避免相似长名称仅截前缀后发生冲突。
 	digest := sha1.Sum([]byte(name))
 	suffix := hex.EncodeToString(digest[:])
 	if limit <= len(suffix) {

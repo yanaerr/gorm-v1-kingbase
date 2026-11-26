@@ -81,8 +81,8 @@ type officialMetadataTableName struct{ ID uint }
 
 func (officialMetadataTableName) TableName() string { return "kb_official_named_table" }
 
-// TestOfficialMetadataRemainingCoverage exercises model parsing, naming,
-// Scanner/Valuer, Scope and search cloning independently of backend SQL.
+// TestOfficialMetadataRemainingCoverage 在不依赖后端 SQL 的情况下验证模型解析、命名、
+// Scanner/Valuer、Scope 和查询克隆。
 func TestOfficialMetadataRemainingCoverage(t *testing.T) {
 	forEachMode(t, func(t *testing.T, mode kb.KbMode) {
 		db := openOfficialCoverageDB(t, mode)
@@ -90,8 +90,7 @@ func TestOfficialMetadataRemainingCoverage(t *testing.T) {
 		dropOfficialTables(t, db, &officialMetadataMapped{}, &officialMetadataIgnoredClash{}, &officialMetadataScannerRow{}, &officialCoreRemainingRow{}, &officialEmbeddedRow{})
 		defer db.DropTableIfExists(&officialMetadataMapped{}, &officialMetadataIgnoredClash{}, &officialMetadataScannerRow{}, &officialCoreRemainingRow{}, &officialEmbeddedRow{})
 
-		// Search-cloning assertions require the canonical core rows, not the
-		// unrelated low-age rows created later by the Scopes subtest.
+		// 查询克隆断言需要标准核心记录，不应使用后续 Scopes 子测试创建的无关低年龄记录。
 		defer db.DropTableIfExists(&officialCoreRemainingChild{})
 		if err := db.AutoMigrate(&officialCoreRemainingRow{}, &officialCoreRemainingChild{}).Error; err != nil {
 			t.Fatalf("prepare metadata search fixtures: %v", err)
@@ -358,8 +357,7 @@ func officialRunModelStructRace(t *testing.T, db *gorm.DB, different bool) {
 	wg.Wait()
 }
 
-// TestOfficialRuntimeIndependentCoverage retains official behaviors which are
-// independent from a real database connection.
+// TestOfficialRuntimeIndependentCoverage 保留不依赖真实数据库连接的官方行为验证。
 func TestOfficialRuntimeIndependentCoverage(t *testing.T) {
 	t.Run("TestOpen_ReturnsError_WithBadArgs", func(t *testing.T) {
 		for _, source := range []interface{}{42, time.Now(), new(string)} {

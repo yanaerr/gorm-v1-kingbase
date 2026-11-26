@@ -3,12 +3,9 @@
 
 package regression_test
 
-// This file is the KingbaseES execution layer for the upstream GORM V1
-// scenarios that cannot be represented by the small smoke tests alone.  The
-// upstream repository has one global database and a large set of package-level
-// models; here each scenario is isolated and run once in MySQL mode and once
-// in Oracle mode.  The subtest names intentionally retain the upstream test
-// names so a CI report can be compared with the official inventory.
+// 本文件是上游 GORM V1 场景的 KingbaseES 执行层，用于覆盖小型冒烟测试无法表达的行为。
+// 上游仓库使用一个全局数据库和大量包级模型；这里隔离每个场景，并分别在 MySQL、Oracle
+// 模式执行。子测试有意保留上游测试名称，便于 CI 报告与官方清单对照。
 
 import (
 	"database/sql"
@@ -56,12 +53,9 @@ type officialNoPrimaryKeyRow struct {
 func (officialNoPrimaryKeyRow) TableName() string { return "kb_official_no_pk_rows" }
 
 type officialAutoIncrementRow struct {
-	// Keep the primary key explicit so the table has only one generated
-	// identity. The upstream fixture embeds a generated primary key and adds a
-	// second AUTO_INCREMENT column; that is legal in PostgreSQL but not in
-	// every Kingbase Oracle compatibility release. The behavior under test is
-	// the non-primary generated column, so explicit IDs preserve that behavior
-	// while keeping the fixture portable.
+	// 显式设置主键，使表中只有一个生成 identity。上游夹具嵌入生成主键并增加第二个
+	// AUTO_INCREMENT 列，这在 PostgreSQL 中合法，但并非所有 KingbaseES Oracle 兼容版本
+	// 都支持。本测试关注非主键生成列，显式 ID 可在保留该行为的同时保证夹具可移植。
 	ID       uint `gorm:"primary_key;auto_increment:false"`
 	Sequence uint `gorm:"AUTO_INCREMENT;index"`
 	Name     string
@@ -155,10 +149,8 @@ type officialDeletedRow struct {
 
 func (officialDeletedRow) TableName() string { return "kb_official_deleted_rows" }
 
-// Association models deliberately use stable names.  Each test drops the
-// complete graph before and after execution, and the two mode subtests run
-// serially, so the names remain safe while keeping GORM's association resolver
-// on its normal path.
+// 关联模型有意使用稳定名称。每个测试在执行前后删除完整关系图，两种模式子测试串行运行，
+// 因而名称不会冲突，同时可让 GORM 关联解析器走正常路径。
 type officialCompany struct {
 	ID   uint   `gorm:"primary_key"`
 	Name string `gorm:"size:128"`
@@ -266,8 +258,7 @@ func requireRows(t *testing.T, result *gorm.DB, want int64, label string) {
 	}
 }
 
-// TestOfficialCreateCoverage covers the create-side scenarios from
-// create_test.go that the original Kingbase smoke tests did not exercise.
+// TestOfficialCreateCoverage 覆盖 create_test.go 中原 KingbaseES 冒烟测试未涉及的 Create 场景。
 func TestOfficialCreateCoverage(t *testing.T) {
 	forEachMode(t, func(t *testing.T, mode kb.KbMode) {
 		db := openOfficialCoverageDB(t, mode)
@@ -420,8 +411,7 @@ func TestOfficialCreateCoverage(t *testing.T) {
 	})
 }
 
-// TestOfficialQueryCoverage covers the query-builder and low-level scan
-// variants represented by query_test.go and main_test.go.
+// TestOfficialQueryCoverage 覆盖 query_test.go 和 main_test.go 中的查询构造及底层扫描变体。
 func TestOfficialQueryCoverage(t *testing.T) {
 	forEachMode(t, func(t *testing.T, mode kb.KbMode) {
 		db := openOfficialCoverageDB(t, mode)
@@ -443,8 +433,8 @@ func TestOfficialQueryCoverage(t *testing.T) {
 			}
 		}
 
-		// A false field with DEFAULT true is omitted by GORM Create. Persist
-		// false explicitly so the map/group tests exercise their intended data.
+		// GORM Create 会省略 DEFAULT true 且值为 false 的字段；这里显式保存 false，
+		// 使 map/group 测试使用预期数据。
 		if err := db.Model(&seed[2]).UpdateColumn("active", false).Error; err != nil {
 			t.Fatalf("prepare false boolean fixture: %v", err)
 		}
@@ -576,8 +566,7 @@ func TestOfficialQueryCoverage(t *testing.T) {
 	})
 }
 
-// TestOfficialUpdateDeleteCoverage covers the update/delete option matrix,
-// including the safety guard against global mutations.
+// TestOfficialUpdateDeleteCoverage 覆盖更新/删除选项矩阵，包括防止全局修改的安全保护。
 func TestOfficialUpdateDeleteCoverage(t *testing.T) {
 	forEachMode(t, func(t *testing.T, mode kb.KbMode) {
 		db := openOfficialCoverageDB(t, mode)
@@ -660,9 +649,8 @@ func TestOfficialUpdateDeleteCoverage(t *testing.T) {
 				t.Fatalf("reload update column: %v", err)
 			}
 			if check.Note != "update-column" || check.UpdatedAt.Before(before) {
-				// UpdateColumn intentionally bypasses timestamp callbacks. The
-				// timestamp check is only diagnostic; the column assertion is the
-				// contract shared by both modes.
+				// UpdateColumn 有意绕过时间戳回调；时间戳检查仅用于诊断，
+				// 列值断言才是两种模式共享的契约。
 				if check.Note != "update-column" {
 					t.Fatalf("update column result: %#v", check)
 				}
@@ -670,9 +658,8 @@ func TestOfficialUpdateDeleteCoverage(t *testing.T) {
 		})
 
 		t.Run("TestUpdatesWithBlankValues", func(t *testing.T) {
-			// GORM's struct Updates intentionally ignores blank fields. This is
-			// the behavior asserted by the upstream TestUpdatesWithBlankValues;
-			// use a map when an explicit blank write is desired.
+			// GORM 的结构体 Updates 有意忽略空值字段，这正是上游 TestUpdatesWithBlankValues
+			// 所断言的行为；需要显式写入空值时应使用 map。
 			if err := db.Model(&officialCoverageRow{}).Where("id = ?", row.ID).Updates(officialCoverageRow{Note: ""}).Error; err != nil {
 				t.Fatalf("blank update: %v", err)
 			}
@@ -686,9 +673,8 @@ func TestOfficialUpdateDeleteCoverage(t *testing.T) {
 			if err := db.Model(&officialCoverageRow{}).Where("id = ?", row.ID).Updates(map[string]interface{}{"note": ""}).Error; err != nil {
 				t.Fatalf("explicit blank map update: %v", err)
 			}
-			// Oracle turns an empty string into SQL NULL. Scanning NULL into a
-			// reused non-nullable Go string can retain its previous value.
-			// Verify server state independently and reload into a fresh model.
+			// Oracle 会把空字符串转换为 SQL NULL；将 NULL 扫描到复用的非空 Go string 时，
+			// 可能保留旧值。因此独立验证服务器状态，并重新加载到新模型。
 			if mode == kb.KbModeOracle {
 				var nullCount int
 				if err := db.Model(&officialCoverageRow{}).Where("id = ? AND note IS NULL", row.ID).Count(&nullCount).Error; err != nil || nullCount != 1 {
@@ -752,9 +738,8 @@ func TestOfficialUpdateDeleteCoverage(t *testing.T) {
 	})
 }
 
-// TestOfficialAssociationCoverage exercises the relation and preload matrix
-// shared by association_test.go, join_table_test.go, polymorphic_test.go and
-// the basic preload cases.
+// TestOfficialAssociationCoverage 验证 association_test.go、join_table_test.go、
+// polymorphic_test.go 及基础预加载场景共享的关联和预加载矩阵。
 func TestOfficialAssociationCoverage(t *testing.T) {
 	forEachMode(t, func(t *testing.T, mode kb.KbMode) {
 		db := openOfficialCoverageDB(t, mode)
@@ -867,8 +852,7 @@ func TestOfficialAssociationCoverage(t *testing.T) {
 			if err := db.Create(&owner).Error; err != nil {
 				t.Fatalf("create polymorphic owner: %v", err)
 			}
-			// GORM uses the owner's table name as the default polymorphic value
-			// (see model_struct.go), not the Go type name.
+			// GORM 使用所有者表名作为默认多态值（见 model_struct.go），而不是 Go 类型名。
 			comment := officialPolyComment{OwnerID: owner.ID, OwnerType: owner.TableName(), Body: "hello"}
 			if err := db.Create(&comment).Error; err != nil {
 				t.Fatalf("create polymorphic comment: %v", err)
@@ -1133,9 +1117,8 @@ func TestOfficialMigrationAndSafetyCoverage(t *testing.T) {
 			if err := tx.Rollback().Error; err != nil {
 				t.Fatalf("rollback migration transaction: %v", err)
 			}
-			// DDL transaction behavior is mode-specific. The assertion is
-			// deliberately limited to the rollback result when the table remains
-			// queryable; a mode that commits DDL may still retain an empty table.
+			// DDL 事务行为与模式相关。若表仍可查询，断言只检查回滚结果；
+			// 会提交 DDL 的模式可能仍保留空表。
 			var count int
 			if err := db.Model(&officialTransactionRow{}).Count(&count).Error; err == nil && count != 0 {
 				t.Fatalf("rolled-back migration transaction retained %d row(s)", count)
@@ -1178,9 +1161,8 @@ func TestOfficialModeSpecificCoverage(t *testing.T) {
 			if mode != kb.KbModeMySQL {
 				t.Skip("MySQL-mode-only capability")
 			}
-			// The full INSERT IGNORE behavior is tested in
-			// TestOfficialCreateCoverage. Keep a separate capability assertion
-			// here so a mode report clearly names the MySQL-only branch.
+			// 完整 INSERT IGNORE 行为已在 TestOfficialCreateCoverage 中验证；
+			// 此处保留独立能力断言，使模式报告明确标出仅 MySQL 支持的分支。
 			if db.Dialect().GetName() != testDialectKingbaseMySQL {
 				t.Fatalf("unexpected MySQL mode dialect: %s", db.Dialect().GetName())
 			}

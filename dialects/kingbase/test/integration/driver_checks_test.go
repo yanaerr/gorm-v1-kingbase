@@ -29,8 +29,7 @@ func finishLoggedTest(t *testing.T, db *gorm.DB) {
 	testutil.DriverLogFor(db).Check(t, 0)
 }
 
-// Check every returned error: an unrelated failure must not satisfy a test
-// that deliberately triggers one particular unique constraint.
+// 检查每一个返回错误：无关失败不能让“故意触发特定唯一约束”的测试误判为通过。
 func isUniqueViolation(err error, constraint string) bool {
 	if errs, ok := err.(gorm.Errors); ok {
 		if len(errs) == 0 {

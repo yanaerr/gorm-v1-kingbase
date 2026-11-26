@@ -12,9 +12,8 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
-// ObserveMetadata keeps a shared observer beneath GORM's per-operation dialect
-// clones. Metadata failures fail the test even when GORM only returns false.
-// The returned DB takes ownership of the existing connection.
+// ObserveMetadata 在 GORM 每次操作创建的方言克隆之下保留共享观察器。
+// 即使 GORM 只返回 false，元数据失败也会令测试失败；返回的 DB 接管现有连接。
 func ObserveMetadata(tb testing.TB, db *gorm.DB) *gorm.DB {
 	tb.Helper()
 	observer := &metadataObserver{
@@ -59,14 +58,13 @@ func (o *metadataObserver) ReportMetadataError(err error) {
 
 func (o *metadataObserver) Exec(query string, args ...interface{}) (sql.Result, error) {
 	if err := o.metadataError(); err != nil {
-		// Do not execute DDL based on metadata that could not be read.
+		// 元数据读取失败后不得根据不可靠结果执行 DDL。
 		return nil, err
 	}
 	return o.SQLCommon.Exec(query, args...)
 }
 
-// GORM V1 uses both methods to recognize a connection that can start
-// transactions, including the automatic transactions around writes.
+// GORM V1 通过这两个方法识别可启动事务的连接，包括写操作外围的自动事务。
 func (o *metadataObserver) Begin() (*sql.Tx, error) {
 	if err := o.metadataError(); err != nil {
 		return nil, err

@@ -71,9 +71,8 @@ func BenchmarkKingbaseCreate(b *testing.B) {
 	}
 }
 
-// BenchmarkGorm mirrors the official GORM V1 ORM benchmark as a Kingbase-owned
-// two-mode benchmark. Unlike the upstream benchmark it keeps b.N under the Go
-// benchmark driver's control.
+// BenchmarkGorm 将 GORM V1 官方 ORM 基准改造成 KingbaseES 自有的双模式基准；
+// 与上游不同，b.N 始终由 Go 基准驱动控制。
 func BenchmarkGorm(b *testing.B) {
 	for _, mode := range []kb.KbMode{kb.KbModeMySQL, kb.KbModeOracle} {
 		mode := mode
@@ -108,9 +107,8 @@ func BenchmarkGorm(b *testing.B) {
 	}
 }
 
-// BenchmarkRawSql retains the official raw-SQL comparison while using GORM's
-// active Kingbase connection and dialect quoting instead of a PostgreSQL-only
-// connection string and dollar placeholders.
+// BenchmarkRawSql 保留官方原始 SQL 对比，但使用 GORM 当前的 KingbaseES 连接和方言引用规则，
+// 不使用 PostgreSQL 专用连接串及美元占位符。
 func BenchmarkRawSql(b *testing.B) {
 	for _, mode := range []kb.KbMode{kb.KbModeMySQL, kb.KbModeOracle} {
 		mode := mode

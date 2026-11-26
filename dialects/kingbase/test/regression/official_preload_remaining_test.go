@@ -188,9 +188,8 @@ func officialAssertPreloadGraph(t *testing.T, root officialPreloadRoot) {
 	}
 }
 
-// TestOfficialPreloadRemainingCoverage preserves each remaining upstream
-// preload scenario as a separately named subtest so the later test document
-// can report the complete preload category rather than one aggregate check.
+// TestOfficialPreloadRemainingCoverage 将每个剩余上游预加载场景保留为独立命名子测试，
+// 使后续测试文档可报告完整预加载类别，而不是一个汇总检查。
 func TestOfficialPreloadRemainingCoverage(t *testing.T) {
 	forEachMode(t, func(t *testing.T, mode kb.KbMode) {
 		db := openOfficialCoverageDB(t, mode)

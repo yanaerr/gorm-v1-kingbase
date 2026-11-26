@@ -24,15 +24,14 @@ const (
 	testDialectKingbaseOracle = "kingbase-oracle"
 )
 
-// Open connects to a Kingbase instance and verifies the requested database mode.
-// Tests skip when the configured instance is unavailable so unit-only CI remains usable.
+// Open 连接 KingbaseES 实例并验证所需数据库模式。配置的实例不可用时跳过测试，
+// 使仅运行单元测试的 CI 仍可使用。
 func Open(tb testing.TB, mode kb.KbMode) *gorm.DB {
 	tb.Helper()
 	return open(tb, mode, nil)
 }
 
-// OpenLogged observes real driver errors, including transaction failures.
-// Successful calls stay quiet. DSN and mode validation are the same as Open.
+// OpenLogged 观察真实驱动错误（包括事务失败），成功调用保持静默；DSN 和模式验证与 Open 一致。
 func OpenLogged(tb testing.TB, mode kb.KbMode) *gorm.DB {
 	tb.Helper()
 	return open(tb, mode, &DriverLog{tb: tb})
@@ -81,8 +80,7 @@ func open(tb testing.TB, mode kb.KbMode, log *DriverLog) *gorm.DB {
 		Close(tb, db)
 		tb.Fatalf("database mode mismatch: got %q, want %q", actualMode, mode)
 	}
-	// Acceptance runs own one isolated schema. Refuse a connection which did not
-	// honor its search_path before any test can create or delete objects.
+	// 验收运行独占一个隔离 schema。在任何测试创建或删除对象前，拒绝未遵循 search_path 的连接。
 	if expected := os.Getenv("KINGBASE_TEST_SCHEMA"); expected != "" {
 		var actual string
 		if err := db.DB().QueryRow("SELECT current_schema()").Scan(&actual); err != nil || actual != expected {
@@ -98,7 +96,7 @@ func open(tb testing.TB, mode kb.KbMode, log *DriverLog) *gorm.DB {
 	return db
 }
 
-// Close reports connection cleanup errors instead of silently discarding them.
+// Close 报告连接清理错误，不静默丢弃。
 func Close(tb testing.TB, db *gorm.DB) {
 	tb.Helper()
 	if err := db.Close(); err != nil {
@@ -106,9 +104,8 @@ func Close(tb testing.TB, db *gorm.DB) {
 	}
 }
 
-// requireKingbaseDatabase turns the normal no-database skip behavior into a
-// hard failure for release/acceptance runs.  Local unit-only runs can leave it
-// unset and continue to skip integration tests when no instance is available.
+// requireKingbaseDatabase 在发布或验收运行中把“无数据库则跳过”改为强制失败；
+// 本地仅单元测试场景可以不设置，并在实例不可用时继续跳过集成测试。
 func requireKingbaseDatabase() bool {
 	switch strings.ToLower(strings.TrimSpace(os.Getenv("REQUIRE_KINGBASE_DB"))) {
 	case "1", "true", "yes", "on":
@@ -118,9 +115,8 @@ func requireKingbaseDatabase() bool {
 	}
 }
 
-// KeepTestTables allows an operator to inspect integration-test tables in
-// KStudio after a focused test finishes. It is intentionally opt-in: normal
-// CI and full-suite runs keep the existing cleanup behavior.
+// KeepTestTables 允许操作人员在指定测试结束后通过 KStudio 检查集成测试表。
+// 该能力必须显式开启；普通 CI 和全量测试仍保持自动清理。
 func KeepTestTables() bool {
 	switch strings.ToLower(strings.TrimSpace(os.Getenv("KEEP_KINGBASE_TEST_TABLES"))) {
 	case "1", "true", "yes", "on":
@@ -130,7 +126,7 @@ func KeepTestTables() bool {
 	}
 }
 
-// UniqueTable returns a short, isolated table name suitable for an integration test.
+// UniqueTable 返回适合集成测试的简短隔离表名。
 func UniqueTable(prefix string) string {
 	sequence := atomic.AddUint64(&tableSequence, 1)
 	return fmt.Sprintf("%s_%d_%d", prefix, time.Now().UnixNano(), sequence)
@@ -144,8 +140,7 @@ func connectionConfig(mode kb.KbMode) (dialect, dsn string) {
 		if dsn == "" {
 			dsn = "host=127.0.0.1 port=54331 user=system password=123456 dbname=test sslmode=disable get_last_insert_id=yes"
 		} else if !hasDSNOption(dsn, "get_last_insert_id") {
-			// gokb exposes MySQL-mode generated IDs through LastInsertId only
-			// when this driver option is enabled.
+			// 只有启用该驱动选项，gokb 才会通过 LastInsertId 返回 MySQL 模式生成主键。
 			dsn += " get_last_insert_id=yes"
 		}
 	case kb.KbModeOracle:

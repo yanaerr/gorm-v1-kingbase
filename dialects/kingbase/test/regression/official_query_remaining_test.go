@@ -42,10 +42,8 @@ type officialQueryRemainingChild struct {
 
 func (officialQueryRemainingChild) TableName() string { return "kb_official_query_remaining_children" }
 
-// TestOfficialQueryRemainingCoverage fills the low-level query and query
-// builder gaps left by the shared official query fixture.  Every database
-// operation is intentionally expressed through GORM so the same assertions
-// exercise the Kingbase MySQL and Oracle dialects.
+// TestOfficialQueryRemainingCoverage 补充共享官方查询夹具遗漏的底层查询和查询构造场景。
+// 所有数据库操作都明确通过 GORM 表达，使相同断言可同时验证 KingbaseES MySQL 和 Oracle 方言。
 func TestOfficialQueryRemainingCoverage(t *testing.T) {
 	forEachMode(t, func(t *testing.T, mode kb.KbMode) {
 		db := openOfficialCoverageDB(t, mode)
@@ -282,9 +280,8 @@ func TestOfficialQueryRemainingCoverage(t *testing.T) {
 				Select("category, COUNT(*) AS count").Group("category").
 				Having("COUNT(*) > (?)", db.Model(&officialQueryRemainingRow{}).Select("COUNT(*)").Where("age > ?", 100).QueryExpr()).
 				Scan(&groups).Error; err != nil {
-				// The official behavior is query-builder composition.  Some Kingbase
-				// releases reject a scalar subquery returning no rows in HAVING; run a
-				// portable equivalent so the category still verifies Group/Having.
+				// 官方行为关注查询构造组合。部分 KingbaseES 版本拒绝 HAVING 中返回空行的标量子查询，
+				// 因此执行可移植等价形式，继续验证 Group/Having 类别。
 				if err := db.Model(&officialQueryRemainingRow{}).Select("category, COUNT(*) AS count").Group("category").Having("COUNT(*) > ?", 0).Scan(&groups).Error; err != nil {
 					t.Fatalf("subselect in having/group: %v", err)
 				}
@@ -400,15 +397,13 @@ func TestOfficialQueryRemainingCoverage(t *testing.T) {
 				t.Fatalf("unexpected ordered name count=%d", len(names))
 			}
 			if fmt.Sprint(names) == fmt.Sprint(want) {
-				// The assertion intentionally checks that Order was not discarded.
+				// 此断言有意检查 Order 没有被丢弃。
 				t.Logf("ordered names happen to be lexical: %v", names)
 			}
 		})
 
-		// Keep the remaining upstream query cases separately named.  Besides
-		// making coverage traceable, these checks retain the chaining/reset
-		// behavior that is easy to lose when Limit, Offset, Attrs and Assign are
-		// only exercised as part of a larger query.
+		// 其余上游查询场景保持独立命名，既便于追踪覆盖率，也保留链式调用和重置行为；
+		// 如果 Limit、Offset、Attrs、Assign 只作为大型查询的一部分验证，这些行为容易遗漏。
 		t.Run("TestLimit", func(t *testing.T) {
 			prefix := "limit-" + string(mode) + "-"
 			for i := 0; i < 5; i++ {

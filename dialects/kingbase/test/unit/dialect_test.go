@@ -206,8 +206,7 @@ func TestKingbaseOpenBlocksDDLAfterMetadataFailure(t *testing.T) {
 				t.Fatalf("shared MetadataError=%v, want %v", got, metadataErr)
 			}
 
-			// No Exec expectation is registered. The tracking connection must
-			// reject CREATE TABLE before it reaches the underlying driver.
+			// 未注册 Exec 期望；跟踪连接必须在 CREATE TABLE 到达底层驱动前拒绝执行。
 			mock.ExpectClose()
 			if err := db.Close(); err != nil {
 				t.Fatalf("close Kingbase dialect: %v", err)
@@ -455,7 +454,7 @@ func TestNewKingbaseDialectRejectsUnsupportedMode(t *testing.T) {
 	kb.NewKingbaseDialect(kb.KbMode("unsupported"))
 }
 
-// definitionType sends the original definition through the public Dialect API.
+// definitionType 通过公开 Dialect API 传入原始定义。
 func definitionType(dialect gorm.Dialect, definition, column string) string {
 	return dialect.DataTypeOf(&gorm.StructField{
 		Name: "Value", DBName: column, IsNormal: true,

@@ -11,9 +11,8 @@ import (
 
 var mysqlCallbacks sync.Once
 
-// Keep GORM's ordinary MySQL Create callback for normal inserts, then add only
-// the Kingbase-specific generated-ID fallback. INSERT IGNORE keeps its separate
-// path because gokb cannot expose its generated ID through LastInsertId.
+// 普通插入继续使用 GORM 原生 MySQL Create 回调，只追加 KingbaseES 的生成主键兜底逻辑。
+// INSERT IGNORE 使用独立路径，因为 gokb 无法通过 LastInsertId 返回该语句的生成值。
 func registerMySQLCallbacks() {
 	mysqlCallbacks.Do(func() {
 		create := gorm.DefaultCallback.Create().Get("gorm:create")
@@ -33,12 +32,10 @@ func registerMySQLCallbacks() {
 	})
 }
 
-// gokb's LastInsertId path requires the AUTO_INCREMENT column to be the
-// table's first physical column. GORM does not impose that struct-field order,
-// so a successful INSERT can otherwise leave a non-first primary key at zero.
-// The normal Create callback runs inside GORM's transaction; reading the
-// session value here keeps the lookup on the same connection and happens
-// before GORM reloads database-default columns.
+// gokb 的 LastInsertId 路径要求 AUTO_INCREMENT 列是表的第一个物理列，而 GORM 不限制
+// 结构体字段顺序，因此成功 INSERT 后非首列主键仍可能保持为零。原生 Create 回调位于
+// GORM 事务内，此处读取会话级 last_insert_id() 可保证使用同一连接，并在 GORM 回读
+// 数据库默认值字段之前完成主键回填。
 func backfillMySQLPrimaryKey(scope *gorm.Scope) {
 	if scope.HasError() || scope.DB().RowsAffected <= 0 {
 		return
@@ -66,6 +63,7 @@ func backfillMySQLPrimaryKey(scope *gorm.Scope) {
 }
 
 func mysqlAutoIncrementPrimary(primary *gorm.Field) bool {
+	// 显式 AUTO_INCREMENT:false 优先；否则只允许整数族主键进入 last_insert_id() 兜底。
 	if value, ok := primary.TagSettingsGet("AUTO_INCREMENT"); ok && strings.EqualFold(strings.TrimSpace(value), "false") {
 		return false
 	}
@@ -82,11 +80,10 @@ func mysqlAutoIncrementPrimary(primary *gorm.Field) bool {
 	}
 }
 
-// With get_last_insert_id=yes, gokb rewrites SQL whose leading token is INSERT
-// and appends RETURNING. INSERT IGNORE cannot use that rewrite, so the leading
-// comment intentionally keeps this statement outside the driver's INSERT
-// recognition while preserving the server's native INSERT IGNORE semantics.
-// The real-driver InsertIgnoreAdapter test is required when updating gokb.
+// 开启 get_last_insert_id=yes 后，gokb 会识别首个词元为 INSERT 的 SQL 并追加 RETURNING。
+// INSERT IGNORE 不能使用该改写，因此有意增加前置注释，使语句避开驱动的 INSERT 识别，
+// 同时保留服务器原生 INSERT IGNORE 语义。升级 gokb 时必须执行真实驱动的
+// InsertIgnoreAdapter 测试，以便及时发现驱动前序识别规则变化。
 func createMySQLIgnore(scope *gorm.Scope) {
 	if scope.HasError() {
 		return
@@ -99,6 +96,8 @@ func createMySQLIgnore(scope *gorm.Scope) {
 		return
 	}
 	var columns, values, defaults []string
+	// 按 GORM 原生 Create 规则收集普通字段、数据库默认值字段及 belongs_to 外键，
+	// 同时尊重 Select/Omit，避免独立路径改变字段选择语义。
 	for _, field := range scope.Fields() {
 		if !mysqlCreateFieldSelected(scope, field) {
 			continue
@@ -120,6 +119,7 @@ func createMySQLIgnore(scope *gorm.Scope) {
 		}
 	}
 	if len(defaults) != 0 {
+		// 沿用 GORM Create 回调保存默认值列的约定，供后续默认值回读逻辑使用。
 		scope.InstanceSet("gorm:blank_columns_with_default_value", defaults)
 	}
 	query := "/* kingbase mysql insert ignore */ INSERT IGNORE INTO " + scope.QuotedTableName()
@@ -132,12 +132,14 @@ func createMySQLIgnore(scope *gorm.Scope) {
 		query += " " + fmt.Sprint(option)
 	}
 	scope.Raw(query)
+	// Scope.Exec 内部负责 SQL trace、RowsAffected 和执行错误传播，保持 GORM 原生可观测性。
 	scope.Exec()
 	if scope.HasError() {
 		return
 	}
 	affected := scope.DB().RowsAffected
 	if affected == 0 {
+		// 重复记录被 IGNORE 时 RowsAffected 为 0，不应回填上一条语句留下的会话 ID。
 		return
 	}
 	if primary := scope.PrimaryField(); primary != nil && primary.IsBlank {
@@ -149,6 +151,7 @@ func createMySQLIgnore(scope *gorm.Scope) {
 }
 
 func mysqlCreateFieldSelected(scope *gorm.Scope, field *gorm.Field) bool {
+	// Select 白名单优先于 Omit；字段既可使用 Go 名称，也可使用数据库列名指定。
 	if selected := scope.SelectAttrs(); len(selected) > 0 {
 		for _, name := range selected {
 			if name == field.Name || name == field.DBName {

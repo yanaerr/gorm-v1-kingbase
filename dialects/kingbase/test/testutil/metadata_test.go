@@ -160,8 +160,8 @@ func TestMetadataFailuresAreObservedWithoutChangingGorm(t *testing.T) {
 							t.Fatalf("DDL error = %v, want metadata error %v", operationErr, failure)
 						}
 					}
-					// No Exec is expected on the underlying driver: the observer must
-					// block writes after a metadata failure, including from GORM clones.
+					// 底层驱动不应收到 Exec：观察器必须在元数据失败后阻止写入，
+					// 包括来自 GORM 克隆句柄的写入。
 					if _, err := observer.Exec("DELETE FROM users"); err != failure {
 						t.Fatalf("Exec was not blocked after a metadata failure: %v", err)
 					}

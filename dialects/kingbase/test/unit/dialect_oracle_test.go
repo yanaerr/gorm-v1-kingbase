@@ -23,10 +23,8 @@ import (
 
 type UUID [16]byte
 
-// These models deliberately exercise the edges of the type rewrite tables.
-// They are used with sqlmock, so the tests do not require a live Kingbase
-// instance. The same models can be reused by integration tests when a DSN is
-// available.
+// 这些模型有意覆盖类型改写表的边界。它们配合 sqlmock 使用，因此不要求真实 KingbaseES
+// 实例；配置 DSN 后，同一模型也可由集成测试复用。
 type oracleBoundaryTypeModel struct {
 	ID       uint   `gorm:"primary_key"`
 	V4000    string `gorm:"size:4000"`
@@ -115,8 +113,7 @@ func TestKingbaseOracleStringAndNumericTypeBoundaries(t *testing.T) {
 		})
 	}
 
-	// Keep the boundary useful for future changes to the model: a decimal
-	// scale or precision must not silently be dropped during normalization.
+	// 让该边界在模型后续变化时仍有意义：归一化期间不得静默丢失 decimal 精度或小数位。
 	if got := fieldType(t, db, &oracleBoundaryTypeModel{}, "Decimal"); !strings.Contains(got, ",30") || !strings.Contains(got, "65") {
 		t.Fatalf("decimal precision/scale was lost: %q", got)
 	}
@@ -446,8 +443,7 @@ func TestKingbaseOracleReturningAndDefaultBoundaries(t *testing.T) {
 		t.Fatalf("Oracle default value SQL mismatch: got %q, want %q", got, want)
 	}
 
-	// A quoted identifier is kept as one identifier by the suffix method. Path
-	// quoting is verified separately through the public ModifyColumn path.
+	// 后缀方法把带引号名称视为一个标识符；路径引用由公开 ModifyColumn 路径单独验证。
 	if got, want := dialect.LastInsertIDReturningSuffix("APP.Order", "id"), `RETURNING APP.Order.id`; got != want {
 		t.Fatalf("unquoted RETURNING suffix mismatch: got %q, want %q", got, want)
 	}
@@ -602,8 +598,8 @@ func TestKingbaseOracleRemoveIndexQuotedPath(t *testing.T) {
 
 func TestKingbaseOracleGeneratedNamesPreserveDistinctSuffixes(t *testing.T) {
 	d := kb.NewKingbaseDialect(kb.KbModeOracle)
-	// The upstream namer replaces non-ASCII characters with underscores;
-	// retain enough ASCII bytes to exercise shortening after that step.
+	// 上游命名器会把非 ASCII 字符替换为下划线；保留足够 ASCII 字节，
+	// 以覆盖该步骤之后的名称缩短逻辑。
 	table := strings.Repeat("表long", 35)
 	a, b := d.BuildKeyName("fk", table, "parent_a"), d.BuildKeyName("fk", table, "parent_b")
 	if a == b || len(a) > 63 || len(b) > 63 || !utf8.ValidString(a) || !utf8.ValidString(b) || a != d.BuildKeyName("fk", table, "parent_a") {

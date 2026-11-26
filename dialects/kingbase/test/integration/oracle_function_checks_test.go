@@ -27,8 +27,8 @@ func (o *oracleFunctionOutput) Errorf(format string, args ...interface{}) {
 	o.failures = append(o.failures, fmt.Sprintf(format, args...))
 }
 
-// Verify the verdicts without intentionally failing a real testing.T. Every
-// case also runs a later query, so a failed function cannot hide the rest.
+// 在不故意令真实 testing.T 失败的情况下验证判定结果。每个场景还会继续执行后续查询，
+// 确保单个函数失败不会遮蔽其余检查。
 func TestOracleFunctionChecksValidateResultsAndContinue(t *testing.T) {
 	for _, test := range []struct {
 		name        string

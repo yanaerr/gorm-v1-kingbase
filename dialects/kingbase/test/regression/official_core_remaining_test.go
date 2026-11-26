@@ -82,9 +82,8 @@ func seedOfficialCoreRows(t *testing.T, db *gorm.DB, mode kb.KbMode) []officialC
 	return rows
 }
 
-// TestOfficialCoreRemainingCoverage contains database-facing cases from
-// main_test.go, query_test.go and delete_test.go which do not naturally belong
-// to association/preload/migration categories.
+// TestOfficialCoreRemainingCoverage 收纳 main_test.go、query_test.go 和 delete_test.go 中
+// 不适合归入关联、预加载或迁移类别的数据库场景。
 func TestOfficialCoreRemainingCoverage(t *testing.T) {
 	forEachMode(t, func(t *testing.T, mode kb.KbMode) {
 		db := openOfficialCoverageDB(t, mode)
@@ -552,9 +551,8 @@ func TestOfficialCoreRemainingCoverage(t *testing.T) {
 		})
 
 		t.Run("TestOpenExistingDB", func(t *testing.T) {
-			// This case specifically tests wrapping a real *sql.DB. The
-			// metadata observer is SQLCommon, so use an independent connection
-			// to the same isolated schema rather than calling DB() on it.
+			// 本场景专门验证真实 *sql.DB 的包装。元数据观察器类型为 SQLCommon，
+			// 因此使用指向同一隔离 schema 的独立连接，而不在其上调用 DB()。
 			existing := testutil.Open(t, mode)
 			defer testutil.Close(t, existing)
 			wrapped, err := gorm.Open(db.Dialect().GetName(), existing.DB())
@@ -569,7 +567,7 @@ func TestOfficialCoreRemainingCoverage(t *testing.T) {
 	})
 }
 
-// Keep mutating subtests from changing the shared read/query fixture.
+// 防止修改型子测试改变共享的读取/查询夹具。
 func deleteOfficialCoreFixture(t *testing.T, db *gorm.DB, name string) {
 	t.Helper()
 	if err := db.Unscoped().Where("name = ?", name).Delete(&officialCoreRemainingRow{}).Error; err != nil {

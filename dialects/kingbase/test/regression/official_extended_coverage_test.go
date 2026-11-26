@@ -3,10 +3,8 @@
 
 package regression_test
 
-// This file contains the smaller, orthogonal official-GORM scenarios that
-// are easy to lose when a large integration test is written as one workflow.
-// Keeping the upstream test names in subtests makes the Kingbase report
-// searchable while each mode still uses the same fixture and assertions.
+// 本文件收纳较小且相互独立的 GORM 官方场景，避免大型集成测试合并为单一流程时遗漏。
+// 子测试保留上游测试名称，便于检索 KingbaseES 报告，同时两种模式继续复用相同夹具和断言。
 
 import (
 	"database/sql"
@@ -44,8 +42,8 @@ type officialExtendedMapped struct {
 
 func (officialExtendedMapped) TableName() string { return "kb_official_ext_mapped" }
 
-// officialExtendedRole is intentionally a struct Scanner with a real field,
-// matching GORM's anonymous-scanner path in create_test.go.
+// officialExtendedRole 有意实现为包含真实字段的结构体 Scanner，
+// 对应 create_test.go 中 GORM 的匿名 Scanner 路径。
 type officialExtendedRole struct{ Name string }
 
 func (r officialExtendedRole) Value() (driver.Value, error) { return r.Name, nil }
@@ -149,8 +147,7 @@ func officialExtNameIn(names ...string) func(*gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB { return db.Where("name IN (?)", names) }
 }
 
-// TestOfficialExtendedCreateCoverage covers the create cases that need their
-// own fixture rather than the shared CRUD row.
+// TestOfficialExtendedCreateCoverage 覆盖需要独立夹具、不能复用共享 CRUD 记录的 Create 场景。
 func TestOfficialExtendedCreateCoverage(t *testing.T) {
 	forEachMode(t, func(t *testing.T, mode kb.KbMode) {
 		db := openOfficialCoverageDB(t, mode)
@@ -233,9 +230,8 @@ func TestOfficialExtendedCreateCoverage(t *testing.T) {
 	})
 }
 
-// TestOfficialExtendedQueryAndTransactionCoverage covers public query-chain
-// behavior and all three Transaction callback outcomes (commit, error rollback
-// and panic rollback).
+// TestOfficialExtendedQueryAndTransactionCoverage 覆盖公开查询链行为，以及 Transaction
+// 回调的三种结果：提交、错误回滚和 panic 回滚。
 func TestOfficialExtendedQueryAndTransactionCoverage(t *testing.T) {
 	forEachMode(t, func(t *testing.T, mode kb.KbMode) {
 		db := openOfficialCoverageDB(t, mode)
@@ -362,9 +358,8 @@ func TestOfficialExtendedQueryAndTransactionCoverage(t *testing.T) {
 	})
 }
 
-// TestOfficialExtendedAssociationCoverage adds the customized-column and
-// auto-save relation variants that are distinct from the basic association
-// graph in official_coverage_test.go.
+// TestOfficialExtendedAssociationCoverage 补充自定义列和关联自动保存变体，
+// 它们不同于 official_coverage_test.go 中的基础关联图。
 func TestOfficialExtendedAssociationCoverage(t *testing.T) {
 	forEachMode(t, func(t *testing.T, mode kb.KbMode) {
 		db := openOfficialCoverageDB(t, mode)
@@ -414,8 +409,7 @@ func TestOfficialExtendedAssociationCoverage(t *testing.T) {
 		t.Run("TestForeignKeyFieldMetadata", func(t *testing.T) {
 			field, ok := db.NewScope(&officialExtendedChild{}).FieldByName("ParentCode")
 			if !ok || field.Relationship == nil || field.Relationship.Kind == "" {
-				// Relationship metadata is attached to the association field in
-				// some GORM V1 versions; verify the association itself instead.
+				// 某些 GORM V1 版本把关系元数据挂在关联字段上，因此改为验证关联本身。
 				if relation, relationOK := db.NewScope(&officialExtendedChild{}).FieldByName("Parent"); !relationOK || relation.Relationship == nil {
 					t.Fatalf("customized foreign-key relationship was not calculated: field=%+v", field)
 				}
@@ -424,8 +418,8 @@ func TestOfficialExtendedAssociationCoverage(t *testing.T) {
 	})
 }
 
-// TestOfficialExtendedValueAndMetadataCoverage keeps non-SQL GORM contracts
-// executable even when a mode-specific server feature is unavailable.
+// TestOfficialExtendedValueAndMetadataCoverage 保证即使模式特有服务器能力不可用，
+// 非 SQL 的 GORM 契约仍可执行验证。
 func TestOfficialExtendedValueAndMetadataCoverage(t *testing.T) {
 	t.Run("TestErrorsCanBeUsedOutsideGorm", func(t *testing.T) {
 		gErrs := gorm.Errors([]error{errors.New("First"), errors.New("Second")})

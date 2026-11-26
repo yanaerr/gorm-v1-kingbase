@@ -11,10 +11,8 @@ import (
 	kb "github.com/jinzhu/gorm/dialects/kingbase"
 )
 
-// These fixtures keep the remaining create scenarios independent from the
-// larger official_coverage fixture.  The upstream tests use one shared User
-// graph; Kingbase tests use short, isolated table names so MySQL and Oracle
-// can be run repeatedly without state leaking between categories.
+// 这些夹具让其余 Create 场景独立于较大的 official_coverage 夹具。上游测试使用共享 User
+// 图；KingbaseES 测试使用简短隔离表名，使 MySQL 和 Oracle 可重复运行且类别间不泄漏状态。
 type officialCreateRemainingRow struct {
 	ID        uint `gorm:"primary_key"`
 	Name      string
@@ -58,8 +56,8 @@ type officialCreateRemainingOwner struct {
 
 func (officialCreateRemainingOwner) TableName() string { return "kb_official_create_owners" }
 
-// TestOfficialCreateRemainingCoverage covers the create cases that cannot be
-// represented by the shared scalar fixture in official_coverage_test.go.
+// TestOfficialCreateRemainingCoverage 覆盖 official_coverage_test.go 的共享标量夹具
+// 无法表达的 Create 场景。
 func TestOfficialCreateRemainingCoverage(t *testing.T) {
 	forEachMode(t, func(t *testing.T, mode kb.KbMode) {
 		db := openOfficialCoverageDB(t, mode)

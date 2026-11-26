@@ -84,8 +84,7 @@ func (r *officialCallbackRemainingRow) AfterDelete() error {
 
 func (r *officialCallbackRemainingRow) AfterFind() { r.AfterFindCalls++ }
 
-// TestOfficialCallbackRemainingCoverage keeps callback registration mechanics
-// and model hook execution in one documented category.
+// TestOfficialCallbackRemainingCoverage 将回调注册机制和模型 Hook 执行归入同一可追踪类别。
 func TestOfficialCallbackRemainingCoverage(t *testing.T) {
 	forEachMode(t, func(t *testing.T, mode kb.KbMode) {
 		db := openOfficialCoverageDB(t, mode)
@@ -117,8 +116,8 @@ func TestOfficialCallbackRemainingCoverage(t *testing.T) {
 			first := testutil.UniqueTable("official_complex_first")
 			middle := testutil.UniqueTable("official_complex_middle")
 			last := testutil.UniqueTable("official_complex_last")
-			// Match GORM V1's own complex-order coverage: register the callback
-			// carrying both constraints first, then register its two anchors.
+			// 与 GORM V1 自身的复杂排序覆盖保持一致：先注册同时携带两个约束的回调，
+			// 再注册它的两个锚点。
 			db.Callback().Query().After(first).Before(last).Register(middle, func(*gorm.Scope) { events = append(events, "middle") })
 			db.Callback().Query().Register(first, func(*gorm.Scope) { events = append(events, "first") })
 			db.Callback().Query().Register(last, func(*gorm.Scope) { events = append(events, "last") })

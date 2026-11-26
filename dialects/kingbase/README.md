@@ -1,34 +1,38 @@
-# GORM V1 KingbaseES 适配说明
+# GORM V1 KingbaseES Dialect
 
-## 1. 适配边界
+English | [简体中文](README_zh-CN.md)
 
-本项目为 GORM V1 提供 KingbaseES 方言：
+## 1. Scope
 
-- 应用统一使用 `kingbase` 方言。方言在连接初始化时执行 `SHOW database_mode`，并根据结果加载 MySQL 或 Oracle 模式实现。
-- 模式查询失败或返回未知值时不加载任一模式方言，不根据连接失败情况猜测或切换模式。
-- `gokb` 应从电科金仓官方网站下载，并与目标数据库版本及兼容模式保持一致。
-- 模式识别由统一方言在连接初始化阶段完成，应用不需要再次查询或手工选择模式。
+This package provides a KingbaseES dialect for GORM V1:
 
-当前验证基线：
+- Applications use the single `kingbase` dialect. During connection initialization, the dialect runs `SHOW database_mode` and selects the MySQL-mode or Oracle-mode implementation.
+- If mode detection fails or returns an unknown value, no mode implementation is loaded. The dialect never guesses or switches modes based on later connection errors.
+- Obtain `gokb` from the official KingbaseES distribution and use the driver version that matches both the target database release and compatibility mode.
+- Applications do not need to query the mode again or select a mode-specific dialect manually.
 
-| 模式 | 数据库版本 |
+Validated baselines:
+
+| Mode | Database version |
 | --- | --- |
 | MySQL | KingbaseES `V009R003C018` |
 | Oracle | KingbaseES `V009R002C016` |
 
-GORM 仓库只使用根目录的 `go.mod/go.sum`，不引入 Kingbase 私有驱动或专用测试依赖。Kingbase 测试源码由 `kingbase_test` 构建标签控制，默认构建不解析 `gokb`。MySQL 和 Oracle 模式的验证分别使用对应版本的本地驱动，具体路径通过不提交的临时 modfile 配置。
+The GORM repository keeps only its root `go.mod/go.sum`. It does not add a private KingbaseES driver or test-only dependency to the committed module files. KingbaseES tests use the `kingbase_test` build tag, so the default build does not resolve `gokb`. MySQL-mode and Oracle-mode verification use their corresponding local driver packages through an uncommitted temporary modfile.
 
-## 2. gokb 驱动配置
+## 2. Configuring the gokb driver
 
-`gokb` 是 KingbaseES 提供的 Go 数据库驱动，实现了标准的 `database/sql` 接口。本项目仅提供 GORM V1 KingbaseES 方言，不包含或重新发布 `gokb` 源码。
+`gokb` is the KingbaseES Go driver and implements the standard `database/sql` interfaces. This package provides only the GORM V1 dialect; it does not include or redistribute `gokb` source code.
 
-### 2.1 获取驱动
+### 2.1 Obtaining the driver
 
-应用应访问[电科金仓官网下载中心](https://www.kingbase.com.cn/download.html)，下载与目标 KingbaseES 版本、客户端操作系统及兼容模式相匹配的 `gokb` 驱动。MySQL 模式和 Oracle 模式应分别使用对应版本的驱动，不应混用。
+Download the `gokb` package that matches the target KingbaseES version, operating system, and compatibility mode from the [official KingbaseES download center](https://www.kingbase.com.cn/download.html). MySQL mode and Oracle mode require their corresponding driver packages and must not share an incompatible build.
 
-### 2.2 配置本地依赖
+### 2.2 Configuring a local dependency
 
-将驱动放置在客户端的固定目录，并在应用工程的 `go.mod` 中配置本地路径。Linux 示例：
+Place the driver in a stable local directory and configure that location in the application's `go.mod`.
+
+Linux example:
 
 ```go
 require kingbase.com/gokb v0.0.0
@@ -36,7 +40,7 @@ require kingbase.com/gokb v0.0.0
 replace kingbase.com/gokb => /opt/kingbase/gokb
 ```
 
-Windows 示例：
+Windows example:
 
 ```go
 require kingbase.com/gokb v0.0.0
@@ -44,19 +48,19 @@ require kingbase.com/gokb v0.0.0
 replace kingbase.com/gokb => D:/KingbaseES/gokb
 ```
 
-`replace` 后的路径应指向 `gokb` 模块所在目录。本地 `replace` 配置属于应用工程的部署配置，不应提交到 GORM 官方仓库。
+The replacement target must be the `gokb` module directory. A local `replace` directive is application deployment configuration and should not be committed to the upstream GORM repository.
 
-### 2.3 使用边界
+### 2.3 Driver boundaries
 
-- 应用需要匿名导入 `kingbase.com/gokb`，由驱动完成 `database/sql` 注册。
-- GORM 方言统一使用 `kingbase` 名称，并在连接初始化阶段识别数据库兼容模式。
-- `kingbase` 是应用可使用的方言名称；MySQL、Oracle 模式名称只用于包内实现，不属于公开接入接口。
-- 方言不会自动下载、安装或切换 `gokb`，应用必须使用与目标实例配套的驱动。
-- 未导入 `gokb` 时，连接会返回 `sql: unknown driver "kingbase"`。
-- 未使用 Kingbase 方言的应用不需要引入 `gokb`，现有 MySQL、PostgreSQL 等方言的依赖和连接方式保持不变。
-- `gokb` 的授权、分发和技术支持由 KingbaseES 提供。
+- Applications must import `kingbase.com/gokb` anonymously so the driver can register itself with `database/sql`.
+- Use `kingbase` as the GORM dialect name. The package detects the compatibility mode during connection initialization.
+- Mode-specific names are internal implementation details and are not public application entry points.
+- The dialect does not download, install, or switch `gokb`. The application must provide the driver that matches its target instance.
+- If `gokb` is not imported, opening a connection returns `sql: unknown driver "kingbase"`.
+- Applications that do not use the KingbaseES dialect do not need `gokb`; existing MySQL, PostgreSQL, and other dialect dependencies remain unchanged.
+- KingbaseES provides the driver license, distribution, and technical support.
 
-## 3. 使用方式
+## 3. Usage
 
 ```go
 import (
@@ -69,9 +73,9 @@ db, err := kingbase.Open(
 )
 ```
 
-推荐使用 `kingbase.Open`。该入口内部仍调用 GORM V1 的公开 `gorm.Open`，但会在返回连接前检查统一方言的 `DialectInitializationError()`：如果 `SHOW database_mode` 查询失败或返回不支持的模式，入口会关闭本次连接并直接返回可诊断错误。
+`kingbase.Open` is the recommended entry point. It still uses the public GORM V1 `gorm.Open` API internally, but checks `DialectInitializationError()` before returning the connection. If `SHOW database_mode` fails or returns an unsupported mode, it closes the new connection and returns a diagnostic error.
 
-`kingbase.Open` 还会自动安装元数据错误跟踪连接。GORM V1 的 `HasTable/HasColumn/HasIndex/HasForeignKey` 只能返回 `bool`；如果底层元数据查询失败，跟踪连接会保存第一个原始错误，并阻止 `AutoMigrate` 根据错误的 `false` 结果继续执行 DDL。迁移或元数据操作后可通过 `kingbase.MetadataError(db)` 获取原始错误：
+`kingbase.Open` also installs metadata error tracking. GORM V1's `HasTable`, `HasColumn`, `HasIndex`, and `HasForeignKey` methods return only `bool`. When an underlying metadata query fails, the tracking connection stores the first original error and prevents `AutoMigrate` from issuing DDL based on an incorrect `false` result. Retrieve the original error after migration or metadata operations with `kingbase.MetadataError`:
 
 ```go
 result := db.AutoMigrate(&Account{})
@@ -83,7 +87,7 @@ if result.Error != nil {
 }
 ```
 
-元数据跟踪通过 `gorm.SQLCommon` 包装器实现。需要设置连接池参数时，使用 `kingbase.SQLDB(db)` 取得原始 `*sql.DB`，不要直接调用 GORM V1 的 `db.DB()`：
+Metadata tracking uses a `gorm.SQLCommon` wrapper. Configure connection pool settings through `kingbase.SQLDB` instead of calling GORM V1's `db.DB()` directly:
 
 ```go
 sqlDB, err := kingbase.SQLDB(db)
@@ -93,7 +97,7 @@ if err != nil {
 sqlDB.SetMaxOpenConns(20)
 ```
 
-为兼容已有应用，直接调用 `gorm.Open("kingbase", ...)` 仍受支持，但 GORM V1 原始 `Open` 不会读取方言初始化结果，也不会安装元数据错误跟踪连接。继续使用该方式的应用必须在执行 CRUD 前检查 `db.Dialect()` 是否实现以下接口，并处理返回错误；此时 `kingbase.MetadataError(db)` 会返回 `kingbase.ErrMetadataTrackingUnavailable`：
+Direct `gorm.Open("kingbase", ...)` calls remain supported for existing applications, but the original GORM V1 `Open` implementation does not read dialect initialization errors or install metadata tracking. Applications that retain this form must check the following interface before issuing CRUD operations. In this case, `kingbase.MetadataError(db)` returns `kingbase.ErrMetadataTrackingUnavailable`.
 
 ```go
 type dialectInitializer interface {
@@ -108,67 +112,67 @@ if initializer, ok := db.Dialect().(dialectInitializer); ok {
 }
 ```
 
-`kingbase.Open` 的参数与 `gorm.Open` 中方言名之后的参数一致：通常传入 DSN；测试或已有连接场景也可以传入实现 `gorm.SQLCommon` 的连接。若传入已有连接且模式初始化失败，该连接同样会被关闭。
+Arguments to `kingbase.Open` match the arguments after the dialect name in `gorm.Open`: normally a DSN, or an existing `gorm.SQLCommon` connection in tests and connection-wrapping scenarios. If initialization fails for an existing connection, that connection is also closed.
 
-MySQL 模式必须设置 `get_last_insert_id=yes`。普通 `Create` 沿用 GORM V1 原始回调；如果配套驱动因自增主键不是表的第一列而未返回 ID，Kingbase 回调会在同一事务中执行 `SELECT last_insert_id()` 完成回填。
+MySQL mode requires `get_last_insert_id=yes`. Ordinary `Create` operations keep the original GORM V1 callback. If the matching driver does not return an ID when the auto-increment primary key is not the first physical column, the KingbaseES callback runs `SELECT last_insert_id()` in the same transaction and backfills the model.
 
-`Set("gorm:insert_modifier", "IGNORE").Create(...)` 使用单独的 Kingbase MySQL Create 路径，因为当前配套 `gokb` 的 `INSERT IGNORE` 不能通过 `LastInsertId` 获取生成值。该路径保留 GORM 的事务、Hook、关联、默认值、`RowsAffected` 及 SQL trace 日志语义。
+`Set("gorm:insert_modifier", "IGNORE").Create(...)` uses a dedicated KingbaseES MySQL Create path because the current matching `gokb` cannot expose generated values for `INSERT IGNORE` through `LastInsertId`. This path retains GORM transaction, Hook, association, default-value, `RowsAffected`, and SQL trace behavior.
 
-## 4. MySQL R3 支持范围
+## 4. MySQL R3 support
 
-- 实现 GORM V1 `Dialect` 接口的全部方法。
-- 反引号和内部反引号转义、`?` 参数绑定、schema 限定名称。
-- 直接使用 R3 原生 `TINYINT/SMALLINT/MEDIUMINT/INT/BIGINT UNSIGNED` 与 `AUTO_INCREMENT`。
-- 无符号类型保持 R3 原生定义，不生成适配层 CHECK，也不使用 `serial/bigserial` 代替 R3 原生类型。
-- 通过 `information_schema` 和 `pg_indexes` 检查表、列、索引和外键。
-- `RemoveIndex` 生成 R3 支持的 `DROP INDEX 索引名`，不生成 MySQL 的 `ON 表名` 后缀。
-- `ModifyColumn` 生成原生 `ALTER TABLE ... MODIFY COLUMN ...`。
-- 支持 `LIMIT`、`OFFSET` 及单独 `OFFSET`。
-- 根据实例 `max_identifier_length` 缩短自动生成的索引和约束名。
-- 支持索引前缀、特殊索引名和 schema 限定索引。
-- 支持 `Group/Having/Count` 与软删除组合计数。
-- 支持普通 `Create` 下非第一列自增主键回填。
-- `INSERT IGNORE` 使用独立 Create 路径，并与配套 `gokb` 的 `RETURNING` 行为兼容。
+- Implements every method in the GORM V1 `Dialect` interface.
+- Supports backtick quoting and escaping, `?` binds, and schema-qualified names.
+- Uses native R3 `TINYINT/SMALLINT/MEDIUMINT/INT/BIGINT UNSIGNED` and `AUTO_INCREMENT` definitions.
+- Preserves native unsigned types without adapter CHECK constraints or `serial/bigserial` substitutions.
+- Reads tables, columns, indexes, and foreign keys from `information_schema` and `pg_indexes`.
+- Generates the R3-supported `DROP INDEX index_name` form without the MySQL `ON table_name` suffix.
+- Generates native `ALTER TABLE ... MODIFY COLUMN ...` statements.
+- Supports `LIMIT`, `OFFSET`, and offset-only pagination.
+- Shortens generated index and constraint names using the instance `max_identifier_length`.
+- Supports prefix indexes, special index names, and schema-qualified indexes.
+- Supports combined `Group`, `Having`, `Count`, and soft-delete queries.
+- Backfills a non-first auto-increment primary key after an ordinary `Create`.
+- Uses a dedicated Create path for `INSERT IGNORE` that is compatible with the matching `gokb` `RETURNING` behavior.
 
-## 5. 已知限制
+## 5. Known limitations
 
-以下内容不属于当前 GORM V1 方言适配范围：
+The following items are outside the current GORM V1 dialect scope:
 
-- `db.Exec` 提交的原始 SQL 不会经过方言改写。原始 `DROP INDEX ... ON 表`、`DROP CHECK`、`DROP FOREIGN KEY` 应按 R3 实际语法修改。
-- GORM V1 没有 CHECK 约束迁移接口，因此不增加私有 `DropCheck` 扩展。
-- `LastInsertId` 的 Go 返回类型是 `int64`；超过 `MaxInt64` 的完整 `uint64` 自增回填不在当前适配范围内。非自增 `BIGINT UNSIGNED` 可按 R3 原生范围读写。
-- Oracle R2 的原生 Identity 使用有符号序列，`uint64` 自增主键只保证到 `MaxInt64`；不增加偏移序列、范围约束等私有完整范围扩展。非自增 `NUMBER(20)` 可手动读写完整 `uint64` 范围。
-- `AutoMigrate` 按 GORM V1 原生行为逐条执行 DDL，不保证整组迁移原子提交；失败时此前成功的 DDL 可能保留，生产迁移应使用独立迁移脚本或专用迁移工具。
-- Oracle R2 索引迁移沿用 GORM V1 原生语义：`HasIndex` 判断后执行创建或删除，不增加创建后的索引定义反查和严格校验。
-- R3 的 ENUM 成员大小写规则可能不接受仅大小写不同的成员，应在需求文档中记录。
-- GORM V1 原生 MySQL 对“非主键 AUTO_INCREMENT 并依赖建表后再创建索引”的模型存在建表顺序边界，不在 Kingbase 方言中增加私有迁移扩展。
-- GORM V1 原生复杂回调排序等框架行为不通过修改 GORM 主干处理。
+- Raw SQL submitted through `db.Exec` is not rewritten by the dialect. Adjust raw `DROP INDEX ... ON table`, `DROP CHECK`, and `DROP FOREIGN KEY` statements to the actual R3 syntax.
+- GORM V1 has no CHECK-constraint migration API, so this package does not add a private `DropCheck` extension.
+- Go's `LastInsertId` return type is `int64`; complete auto-increment backfill beyond `MaxInt64` for `uint64` is not supported. A non-auto-increment `BIGINT UNSIGNED` field can still use the native R3 range.
+- Oracle R2 native identity sequences are signed. Auto-increment `uint64` primary keys are guaranteed only through `MaxInt64`; the dialect does not add an offset sequence or private full-range allocation scheme. A non-auto-increment `NUMBER(20)` field can store the full `uint64` range manually.
+- `AutoMigrate` executes DDL statements one at a time according to native GORM V1 behavior and does not guarantee an atomic migration group. Previously successful DDL may remain after a failure; use a dedicated migration script or tool for production migrations.
+- Oracle R2 index migration keeps GORM V1 semantics: it checks `HasIndex` and then creates or drops the index. It does not add post-create definition introspection or strict validation.
+- R3 ENUM member rules may reject members that differ only by letter case; document this constraint in the application requirements.
+- Native GORM V1 MySQL has a table-creation ordering boundary for a non-primary `AUTO_INCREMENT` field whose index is created later. The KingbaseES dialect does not add a private migration extension for this framework behavior.
+- Native GORM V1 framework behavior, including complex callback ordering, is not changed in the GORM core.
 
-## 6. Oracle R2 适配
+## 6. Oracle R2 support
 
-Oracle 模式使用独立方言，主要覆盖：
+Oracle mode uses an independent dialect implementation and includes:
 
-- 双引号标识符和 schema 限定名称。
-- 未超出边界的定长字符串使用 `varchar2`，未指定长度或超长字符串使用 `text`。
-- 普通字节数据使用 `bytea`，UUID/GUID 和 `json.RawMessage` 分别使用 `uuid`、`jsonb`。
-- 仅在字段显式指定时使用 `clob/blob` 大对象类型。
-- `number/timestamp/identity` 等 Oracle 兼容类型。
-- `FETCH FIRST`、`OFFSET ... FETCH NEXT` 分页。
-- `ALTER TABLE ... MODIFY ...`。
-- `information_schema/pg_indexes` 元数据查询。
-- `DUAL` 和 `RETURNING` 主键回填。
+- Double-quoted identifiers and schema-qualified names.
+- `varchar2` for bounded strings within the supported length; `text` for unspecified or oversized strings.
+- `bytea` for ordinary byte data, `uuid` for UUID/GUID values, and `jsonb` for `json.RawMessage`.
+- `clob/blob` only when explicitly requested by the field definition.
+- Oracle-compatible `number`, `timestamp`, and `identity` types.
+- `FETCH FIRST` and `OFFSET ... FETCH NEXT` pagination.
+- `ALTER TABLE ... MODIFY ...`.
+- Metadata queries through `information_schema` and `pg_indexes`.
+- `DUAL` and `RETURNING` primary-key backfill.
 
-Oracle R2 的 `uint64` 边界与 GORM V1 原生方言保持一致：非自增字段映射为 `NUMBER(20)`，可手动写入完整范围；自增主键使用原生 `BIGINT IDENTITY`，只保证到 `MaxInt64`。不增加偏移序列、范围约束等完整 `uint64` 自动分配扩展。
+For `uint64`, Oracle R2 follows the GORM V1 dialect boundary: a non-auto-increment field maps to `NUMBER(20)` and can store the full range manually; an auto-increment primary key uses native `BIGINT IDENTITY` and is guaranteed only through `MaxInt64`. No offset sequence, range constraint, or private full-range allocation extension is added.
 
-字段注释迁移使用 `NewOracleMigrator`；该扩展只属于 Oracle 模式：
+Use `NewOracleMigrator` when field-comment migration is required. This extension is available only in Oracle mode:
 
 ```go
 kb.NewOracleMigrator(db).AutoMigrate(&Account{}).Error
 ```
 
-## 7. 测试
+## 7. Testing
 
-仓库内不保存 Kingbase 专用 modfile 或本机驱动路径。在 GORM 根目录从公共模块生成仅供本机使用的 modfile，并指向与目标模式配套的 `gokb`：
+The repository does not store a KingbaseES-specific modfile or a local driver path. From the GORM root, generate a local-only modfile that points to the `gokb` package matching the target mode:
 
 ```bash
 cd /path/to/gorm-master
@@ -185,9 +189,9 @@ go mod edit -modfile=go.kingbase.local.mod \
 go mod download -modfile=go.kingbase.local.mod all
 ```
 
-`KINGBASE_GOKB_DIR` 必须是本机 `gokb` 模块的绝对路径。切换 MySQL、Oracle 模式时，应重新生成 `go.kingbase.local.mod` 并将该变量指向相应模式的驱动目录。`go.kingbase.local.mod/go.kingbase.local.sum` 只用于本机验证，不进入提交内容。
+`KINGBASE_GOKB_DIR` must be the absolute path of the local `gokb` module. Regenerate `go.kingbase.local.mod` and point the variable to the matching driver directory when switching between MySQL and Oracle modes. `go.kingbase.local.mod/go.kingbase.local.sum` are local verification files and must not be committed.
 
-离线单元测试：
+Offline unit tests:
 
 ```bash
 go vet ./dialects/kingbase
@@ -199,7 +203,7 @@ go vet -tags=kingbase_test -modfile=go.kingbase.local.mod -mod=readonly \
   ./dialects/kingbase/...
 ```
 
-MySQL R3 真实库测试：
+MySQL R3 real-database tests:
 
 ```bash
 export KINGBASE_MYSQL_DSN='host=127.0.0.1 port=54331 user=system password=*** dbname=test sslmode=disable get_last_insert_id=yes'
@@ -218,7 +222,7 @@ go test -tags=kingbase_test -modfile=go.kingbase.local.mod -mod=readonly -v -cou
   -run '^TestKingbaseMySQLMode_InsertIgnoreAdapter$'
 ```
 
-Oracle R2 真实库测试：
+Oracle R2 real-database tests:
 
 ```bash
 export KINGBASE_ORACLE_DSN='host=127.0.0.1 port=54332 user=system password=*** dbname=test sslmode=disable'
@@ -229,34 +233,36 @@ go test -tags=kingbase_test -modfile=go.kingbase.local.mod -mod=readonly -v -cou
   -run '^TestKingbaseOracle'
 ```
 
-`testutil.Open` 在未设置 `REQUIRE_KINGBASE_DB=1` 时允许连接失败后跳过，因此正式验收必须设置该变量。MySQL DSN 未显式设置 `get_last_insert_id` 时，测试入口会自动补上 `yes`。
+Without `REQUIRE_KINGBASE_DB=1`, `testutil.Open` may skip a test after a connection failure. Formal acceptance runs must set this variable. If a MySQL DSN omits `get_last_insert_id`, the test helper adds `yes` automatically.
 
-## 8. 目录职责
+## 8. Directory responsibilities
 
 ```text
 dialects/
-└── kingbase/              # KingbaseES 方言实现
-    ├── README.md           # 使用、验证与目录说明
+└── kingbase/                 # KingbaseES dialect implementation
+    ├── README.md              # English usage and verification guide
+    ├── README_zh-CN.md        # Chinese usage and verification guide
     └── test/
-        ├── unit/            # SQL Mock 与公开接口测试
-        ├── integration/     # 真实数据库功能与适配验收
-        ├── regression/      # GORM V1 行为回归
-        ├── negative/        # 错误传播与异常场景
-        ├── nonfunctional/   # 并发、性能和稳定性
-        └── testutil/        # 测试连接、日志和公共辅助
+        ├── unit/              # SQL mock and public API tests
+        ├── integration/       # Real-database functional acceptance tests
+        ├── regression/        # GORM V1 behavior regression tests
+        ├── negative/          # Error propagation and failure scenarios
+        ├── nonfunctional/     # Concurrency, performance, and resilience
+        └── testutil/          # Shared connections, logging, and helpers
 ```
 
-生产适配文件：
+Production files:
 
-| 文件 | 职责 |
+| File | Responsibility |
 | --- | --- |
-| `dialect.go` | 模式常量、方言注册、构造入口和名称解析 |
-| `dialect_mysql.go` | MySQL `Dialect` 方法、分页、DDL 和自动名称 |
-| `dialect_mysql_types.go` | 复用 GORM MySQL 类型并保留 R3 原生定义 |
-| `dialect_mysql_metadata.go` | MySQL 模式元数据查询 |
-| `dialect_mysql_callbacks.go` | 普通 Create 主键兜底及 `INSERT IGNORE` |
-| `dialect_callbacks.go` | 两个模式共用的分组计数修补 |
-| `dialect_oracle.go` | Oracle 方言接口、类型、分页和 DDL |
-| `dialect_oracle_metadata.go` | Oracle 模式元数据查询 |
-| `oracle_bind.go` | Oracle `:name` 命名绑定变量构造与名称校验 |
-| `oracle_migration.go` | Oracle 专项迁移入口 |
+| `dialect.go` | Mode constants, dialect registration, unified connection entry point, and identifier parsing |
+| `dialect_mysql.go` | MySQL-mode `Dialect` methods, pagination, DDL, and generated names |
+| `dialect_mysql_types.go` | GORM MySQL type reuse while retaining native R3 definitions |
+| `dialect_mysql_metadata.go` | MySQL-mode metadata queries |
+| `dialect_mysql_callbacks.go` | Ordinary Create ID fallback and `INSERT IGNORE` handling |
+| `dialect_callbacks.go` | Grouped-count handling shared by both modes |
+| `dialect_oracle.go` | Oracle-mode dialect interface, types, pagination, and DDL |
+| `dialect_oracle_metadata.go` | Oracle-mode metadata queries |
+| `metadata.go` | Metadata error tracking and underlying `*sql.DB` access |
+| `oracle_bind.go` | Oracle `:name` bind creation and name validation |
+| `oracle_migration.go` | Oracle-specific migration entry point |

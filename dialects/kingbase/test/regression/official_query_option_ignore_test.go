@@ -24,8 +24,7 @@ type officialIgnoreReloadRow struct {
 	Name   string `gorm:"default:'panda'"`
 }
 
-// These three upstream scenarios exist in this workspace in addition to the
-// historical v1.9.16 inventory. Keep construction and real result assertions.
+// 除历史 v1.9.16 清单外，当前工作区还包含这三个上游场景；保留构造过程和真实结果断言。
 func TestOfficialQueryOptionAndIgnoreCoverage(t *testing.T) {
 	forEachMode(t, func(t *testing.T, mode kb.KbMode) {
 		db := testutil.OpenLogged(t, mode)
@@ -83,7 +82,7 @@ func TestOfficialQueryOptionAndIgnoreCoverage(t *testing.T) {
 				}
 			})
 			defer callbacks.Query().Remove("kb:reject_unfiltered_ignore_reload")
-			// A fresh zero-primary-key model exercises the dangerous default-value reload.
+			// 使用全新且主键为零的模型覆盖容易出错的默认值回读路径。
 			duplicate := officialIgnoreReloadRow{Number: row.Number}
 			result := db.Table(ignoreTable).Set("gorm:insert_modifier", "IGNORE").Create(&duplicate)
 			if result.Error != nil || result.RowsAffected != 0 || duplicate.ID != 0 {

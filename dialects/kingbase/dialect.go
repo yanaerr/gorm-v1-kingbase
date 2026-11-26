@@ -7,7 +7,7 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
-// KbMode defines compatibility mode for Kingbase.
+// KbMode 表示 KingbaseES 实例的兼容模式。
 type KbMode string
 
 const (
@@ -15,15 +15,16 @@ const (
 	KbModeOracle KbMode = "oracle"
 )
 
+// DialectKingbase 是应用接入 KingbaseES 时使用的统一 GORM 方言名称。
 const DialectKingbase = "kingbase"
 
+// dialectInitializer 用于在不修改 GORM V1 Open 的前提下读取方言初始化错误。
 type dialectInitializer interface {
 	DialectInitializationError() error
 }
 
-// Open initializes GORM through the unified KingbaseES dialect and returns
-// mode-detection failures during connection setup. Its arguments are the same
-// as the arguments after dialect in gorm.Open.
+// Open 通过统一的 KingbaseES 方言初始化 GORM，并直接返回连接阶段的模式探测错误。
+// 参数与 gorm.Open 中方言名称之后的参数保持一致。
 func Open(args ...interface{}) (*gorm.DB, error) {
 	db, openErr := openWithMetadataTracking(args...)
 	if db == nil {
@@ -44,6 +45,8 @@ func Open(args ...interface{}) (*gorm.DB, error) {
 	return db, openErr
 }
 
+// NewKingbaseDialect 按已确认的兼容模式创建内部方言实现。
+// 应用连接应优先使用 Open，由统一方言自动探测模式。
 func NewKingbaseDialect(mode KbMode) gorm.Dialect {
 	base := KingbaseDialect{mode: mode}
 	switch mode {
@@ -56,10 +59,11 @@ func NewKingbaseDialect(mode KbMode) gorm.Dialect {
 	}
 }
 
-// kingbaseAutoDialect is the public KingbaseES entry point. It detects the
-// connected instance mode once during gorm.Open and then delegates every
-// dialect operation to the mode-specific implementation.
+// kingbaseAutoDialect 是 KingbaseES 对外统一方言的内部实现。
+// 它在 gorm.Open 调用 SetDB 时只探测一次数据库模式，后续所有方言操作
+// 均转发给对应的 MySQL 或 Oracle 模式实现，避免运行期间发生隐式模式切换。
 type kingbaseAutoDialect struct {
+	// mode 和 delegate 只在 SetDB 成功探测后同时赋值；initErr 保存探测阶段的首个失败。
 	mode     KbMode
 	delegate gorm.Dialect
 	initErr  error
@@ -68,6 +72,7 @@ type kingbaseAutoDialect struct {
 var _ gorm.Dialect = (*kingbaseAutoDialect)(nil)
 
 func (d *kingbaseAutoDialect) GetName() string {
+	// 初始化成功后返回模式方言名，供内部回调选择分支；初始化前仍保持公开名称 kingbase。
 	if d.delegate != nil {
 		return d.delegate.GetName()
 	}
@@ -75,6 +80,7 @@ func (d *kingbaseAutoDialect) GetName() string {
 }
 
 func (d *kingbaseAutoDialect) SetDB(db gorm.SQLCommon) {
+	// 方言原型可能被重复注册或复用，每次绑定连接前必须清理上一次探测状态。
 	d.mode = ""
 	d.delegate = nil
 	d.initErr = nil
@@ -84,6 +90,7 @@ func (d *kingbaseAutoDialect) SetDB(db gorm.SQLCommon) {
 	}
 
 	var databaseMode string
+	// database_mode 是选择 SQL 语法和元数据实现的唯一依据；查询失败时不猜测模式。
 	if err := db.QueryRow("SHOW database_mode").Scan(&databaseMode); err != nil {
 		d.initErr = fmt.Errorf("kingbase: read database_mode: %v", err)
 		return
@@ -103,11 +110,12 @@ func (d *kingbaseAutoDialect) SetDB(db gorm.SQLCommon) {
 	d.delegate.SetDB(db)
 }
 
-// DialectInitializationError exposes a mode-detection failure without adding
-// an initialization hook to the original GORM v1 Open implementation.
+// DialectInitializationError 暴露模式探测错误，无需为原始 GORM V1 Open 增加初始化钩子。
 func (d *kingbaseAutoDialect) DialectInitializationError() error { return d.initErr }
 
 func (d *kingbaseAutoDialect) selected() gorm.Dialect {
+	// 方言方法不具备 error 返回值。若调用方绕过 Open 的初始化检查，
+	// 在首次使用时立即 panic 比生成错误模式的 SQL 更容易定位根因。
 	if d.delegate != nil {
 		return d.delegate
 	}
@@ -117,6 +125,7 @@ func (d *kingbaseAutoDialect) selected() gorm.Dialect {
 	panic("kingbase: database mode has not been initialized")
 }
 
+// 以下 Dialect 方法均透明转发给已探测的模式实现，统一入口本身不重复维护 SQL 规则。
 func (d *kingbaseAutoDialect) BindVar(i int) string { return d.selected().BindVar(i) }
 
 func (d *kingbaseAutoDialect) Quote(key string) string { return d.selected().Quote(key) }
@@ -181,7 +190,9 @@ func (d *kingbaseAutoDialect) CurrentDatabase() string {
 	return d.selected().CurrentDatabase()
 }
 
+// Register 注册统一方言、内部模式方言及 KingbaseES 专用回调。
 func Register() {
+	// 对外只使用 kingbase；两个模式名称仅供内部委托和兼容性测试使用。
 	gorm.RegisterDialect(DialectKingbase, &kingbaseAutoDialect{})
 	registerKingbaseModeDialects()
 	registerMySQLCallbacks()
@@ -192,7 +203,10 @@ func init() {
 	Register()
 }
 
+// cleanIdentifier 去除单个标识符外层的 SQL 引号并还原转义。
 func cleanIdentifier(name string) string {
+	// 仅移除包裹整个标识符的一层引号，并还原对应的转义字符。
+	// schema 路径必须先拆分再调用本函数，避免把 "APP"."IDX" 当成单个名称。
 	name = strings.TrimSpace(name)
 	if len(name) >= 2 {
 		switch {
@@ -207,7 +221,9 @@ func cleanIdentifier(name string) string {
 	return name
 }
 
+// splitSchemaTable 拆分 MySQL 风格或通用引用形式的 schema 与对象名。
 func splitSchemaTable(table string) (schema, name string) {
+	// 只把引号之外的第一个点解释为 schema 分隔符，引号内的点属于标识符本身。
 	table = strings.TrimSpace(table)
 	var quote byte
 	componentStart := true

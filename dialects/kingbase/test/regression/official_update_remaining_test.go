@@ -48,8 +48,8 @@ type officialUpdateRemainingDefault struct {
 
 func (officialUpdateRemainingDefault) TableName() string { return "kb_official_update_defaults" }
 
-// TestOfficialUpdateRemainingCoverage covers the Select/Omit/Map/UpdateColumn
-// combinations and virtual-field behavior from update_test.go.
+// TestOfficialUpdateRemainingCoverage 覆盖 update_test.go 中 Select、Omit、Map、
+// UpdateColumn 的组合及虚拟字段行为。
 func TestOfficialUpdateRemainingCoverage(t *testing.T) {
 	forEachMode(t, func(t *testing.T, mode kb.KbMode) {
 		db := openOfficialCoverageDB(t, mode)
@@ -70,8 +70,8 @@ func TestOfficialUpdateRemainingCoverage(t *testing.T) {
 		}
 
 		t.Run("TestUpdate", func(t *testing.T) {
-			// Compare persisted timestamps with a deterministic separation. Native
-			// MySQL DATETIME may retain seconds while the in-memory value has ns.
+			// 使用确定的时间间隔比较持久化时间戳；原生 MySQL DATETIME 可能只保留秒，
+			// 而内存值包含纳秒。
 			old := time.Now().Add(-time.Hour).Truncate(time.Second)
 			if err := db.Model(&first).UpdateColumn("updated_at", old).Error; err != nil {
 				t.Fatalf("seed persisted update timestamp: %v", err)
@@ -260,8 +260,7 @@ func TestOfficialUpdateRemainingCoverage(t *testing.T) {
 				t.Fatalf("create default row: counter=%d err=%v", row.Counter, err)
 			}
 			if row.Name != "galeone" {
-				// Some Kingbase versions return database defaults only after a
-				// reload; the official test explicitly reloads before asserting.
+				// 部分 KingbaseES 版本只在重新加载后返回数据库默认值；官方测试也会在断言前显式重载。
 				var reloaded officialUpdateRemainingDefault
 				if err := db.First(&reloaded, row.Counter).Error; err != nil {
 					t.Fatalf("reload default row: %v", err)

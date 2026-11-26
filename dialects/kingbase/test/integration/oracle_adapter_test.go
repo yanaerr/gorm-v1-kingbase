@@ -16,9 +16,8 @@ import (
 	"kingbase.com/gokb"
 )
 
-// These tests enter through GORM and check the stored definition and values.
-// Raw SQL below reads state or prepares an independent fixture; it never
-// replaces a failed ORM statement with a different statement.
+// 这些测试从 GORM 入口执行，并检查实际保存的定义和值。下方原始 SQL 只用于读取状态
+// 或准备独立夹具，绝不会用另一条语句替换失败的 ORM 语句。
 type oracleAdapterValue struct {
 	ID      int64 `gorm:"primary_key"`
 	Native  int
@@ -89,8 +88,7 @@ func TestKingbaseOracleMode_AdapterBoundaries(t *testing.T) {
 		if err := db.Table(table).AutoMigrate(&oracleAdapterValue{}).Error; err != nil {
 			t.Fatal(err)
 		}
-		// KingbaseES V9R2 Oracle mode accepts both JSON and JSONB declarations,
-		// but normalizes both physical catalog types to jsonb.
+		// KingbaseES V9R2 Oracle 模式同时接受 JSON 和 JSONB 声明，但会把物理目录类型统一为 jsonb。
 		for column, want := range map[string]string{"id": "bigint", "native": "bigint", "u32": "bigint", "u64": "numeric(20,0)", "f24": "real", "f53": "double precision", "exact": "numeric(65,30)", "json": "jsonb", "json_b": "jsonb", "moment": "timestamp(6) with time zone"} {
 			if got := oracleStoredType(t, db, table, column); got != want {
 				t.Fatalf("字段 %s 实际类型=%q，预期=%q", column, got, want)
@@ -113,7 +111,7 @@ func TestKingbaseOracleMode_AdapterBoundaries(t *testing.T) {
 		if err := db.Raw(fmt.Sprintf(`SELECT "json_b"->>'Case' FROM "%s" WHERE "id"=?`, table), row.ID).Row().Scan(&jsonValue); err != nil || jsonValue != "Alpha" {
 			t.Fatalf("原生 JSONB 运算结果=%q error=%v", jsonValue, err)
 		}
-		// A CLOB substitution would wrongly accept invalid JSON here.
+		// 如果错误替换为 CLOB，这里的非法 JSON 会被错误接受。
 		oracleExpectedServerError(t, db, "22P02", "", func() error {
 			return db.Table(table).Where("id=?", row.ID).UpdateColumn("json", "{broken").Error
 		})
@@ -130,8 +128,7 @@ func TestKingbaseOracleMode_AdapterBoundaries(t *testing.T) {
 			t.Fatal(err)
 		}
 		index := testutil.UniqueTable("Idx-Mixed")
-		// Prepare the mixed-name index independently. This case tests the
-		// dialect's RemoveIndex, not GORM V1's verbatim AddIndex argument.
+		// 独立准备混合大小写索引；本场景验证方言 RemoveIndex，而不是 GORM V1 原样传递的 AddIndex 参数。
 		if err := db.Exec(fmt.Sprintf(`CREATE INDEX "%s" ON "%s" ("name")`, index, table)).Error; err != nil {
 			t.Fatal(err)
 		}
@@ -194,8 +191,8 @@ func TestKingbaseOracleMode_AdapterBoundaries(t *testing.T) {
 		if db.HasTable(missing) || db.Dialect().HasColumn(table, "missing") || db.Dialect().HasIndex(table, missing) || db.Dialect().HasForeignKey(table, missing) {
 			t.Fatal("不存在的对象被误判为存在")
 		}
-		// A second owned schema exposes the USER_TABLES/owner-vs-search_path
-		// bug without touching any existing application objects.
+		// 使用第二个自有 schema 暴露 USER_TABLES 中 owner 与 search_path 不一致的问题，
+		// 同时不触碰任何已有应用对象。
 		schema := testutil.UniqueTable("kb_ora_other")
 		if err := db.Exec(`CREATE SCHEMA "` + schema + `"`).Error; err != nil {
 			t.Fatal(err)
@@ -293,7 +290,7 @@ func TestKingbaseOracleMode_AdapterBoundaries(t *testing.T) {
 			t.Fatal(err)
 		}
 		oracleRequireCount(t, db, stateSQL, 0, childTable, constraint)
-		// Removal must change behavior, not merely make HasForeignKey false.
+		// 删除必须真正改变数据库行为，而不只是让 HasForeignKey 返回 false。
 		if err := db.Table(childTable).Create(&childRow{ParentID: parent.ID + 10000}).Error; err != nil {
 			t.Fatal(err)
 		}

@@ -182,8 +182,7 @@ func (officialSaveAssociationPlace) TableName() string {
 	return "kb_official_save_association_places"
 }
 
-// TestOfficialCustomRelationRemainingCoverage owns the customized-column,
-// custom join-table and association auto-save cases.
+// TestOfficialCustomRelationRemainingCoverage 覆盖自定义列、自定义连接表和关联自动保存场景。
 func TestOfficialCustomRelationRemainingCoverage(t *testing.T) {
 	forEachMode(t, func(t *testing.T, mode kb.KbMode) {
 		db := openOfficialCoverageDB(t, mode)
@@ -385,8 +384,7 @@ func TestOfficialCustomRelationRemainingCoverage(t *testing.T) {
 			}
 			second := officialSaveAssociationPlace{
 				PlaceAddressID: shared.ID,
-				// This transient value must not be inserted because the association
-				// explicitly disables saving; the foreign key still reuses shared.
+				// 关联已显式禁用保存，因此不得插入该临时值；外键仍复用 shared。
 				PlaceAddress: &officialSaveAssociationAddress{Address: "must-not-save-" + string(mode)},
 				OwnerAddress: &officialSaveAssociationAddress{Address: "owner-two-" + string(mode)},
 			}

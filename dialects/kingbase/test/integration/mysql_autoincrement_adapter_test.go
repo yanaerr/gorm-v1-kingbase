@@ -110,7 +110,7 @@ func mysqlAutoUnsignedOmitted(c *mysqlDDLCase) {
 	if next.ID != 13 {
 		c.t.Errorf("[未通过] 主键回填=%d，预期=13", next.ID)
 	}
-	// The caller may omit the entire auto column from its data carrier.
+	// 调用方的数据载体可以完全省略自增列。
 	type nameOnly struct{ Name string }
 	if !c.operation("ORM 数据模型未包含主键", func() error { return c.db.Table(table).Create(&nameOnly{Name: "name_only"}).Error }) {
 		return
@@ -148,8 +148,7 @@ type mysqlAutoCheckedRow struct {
 	Note   *int
 }
 
-// This data carrier deliberately has no AUTO_INCREMENT tag. The database
-// default still applies when the column is omitted from the INSERT.
+// 此数据载体有意不声明 AUTO_INCREMENT 标签；INSERT 省略该列时数据库默认值仍应生效。
 type mysqlAutoNullRow struct {
 	ID     int `gorm:"primary_key;AUTO_INCREMENT:false"`
 	Ticket *uint32
@@ -231,8 +230,8 @@ func mysqlAutoUnsignedMode(c *mysqlDDLCase) {
 			c.t.Fatalf("[未通过] 读取 sql_mode: %v", err)
 		}
 		flags += ",NO_AUTO_VALUE_ON_ZERO"
-		// true makes this setting local to the pinned transaction. Use the
-		// parameter API: SET's quoted comma-list is parsed differently here.
+		// true 使该设置只在固定事务内生效。这里使用参数接口，因为 SET 对带引号逗号列表
+		// 的解析规则不同。
 		var activeFlags string
 		if err := tx.CommonDB().QueryRow("SELECT set_config('sql_mode', ?, true)", flags).Scan(&activeFlags); err != nil {
 			c.t.Fatalf("[准备失败] 设置事务内 sql_mode: %v", err)

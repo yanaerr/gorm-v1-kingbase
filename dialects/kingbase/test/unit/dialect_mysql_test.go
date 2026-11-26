@@ -291,9 +291,8 @@ func TestKingbaseMySQLCallerOffsetWithoutLimit(t *testing.T) {
 	}
 }
 
-// Raw SQL is a capability probe, while RemoveIndex is the adaptation entry.
-// Keep the ON clause and original error so the probe cannot silently pass by
-// using the adapter's supported DROP INDEX form.
+// 原始 SQL 只作为能力探针，RemoveIndex 才是适配入口。保留 ON 子句和原始错误，
+// 避免探针因改用适配器支持的 DROP INDEX 形式而静默通过。
 func TestKingbaseMySQLRawDDLRetainsOriginalSQLAndError(t *testing.T) {
 	db, mock, close := openMockGorm(t, testDialectKingbaseMySQL)
 	defer close()
@@ -329,7 +328,7 @@ func TestKingbaseMySQLRemoveIndexUsesKingbaseSQL(t *testing.T) {
 			db, mock, close := openMockGorm(t, testDialectKingbaseMySQL)
 			defer close()
 			db.LogMode(false)
-			// Exercise the real GORM entry point, not a test-side raw SQL path.
+			// 走真实 GORM 入口，而不是测试侧原始 SQL 路径。
 			mock.ExpectExec("^" + regexp.QuoteMeta(test.query) + "$").WillReturnResult(sqlmock.NewResult(0, 0))
 			if err := db.Table(test.table).RemoveIndex(test.index).Error; err != nil {
 				t.Fatal(err)
@@ -431,8 +430,8 @@ func TestKingbaseRawDialectIsConnectionScoped(t *testing.T) {
 	defer close1()
 	db2, mock2, close2 := openMockGorm(t, testDialectKingbaseMySQL)
 	defer close2()
-	// Force the public CurrentDatabase path to delegate to native MySQL.
-	// A shared delegate would query the other connection and fail expectations.
+	// 强制公开 CurrentDatabase 路径委托给原生 MySQL；若共享委托实例，
+	// 会错误查询另一个连接并导致期望失败。
 	for i, item := range []struct {
 		db   *gorm.DB
 		mock sqlmock.Sqlmock

@@ -17,17 +17,15 @@ import (
 	"github.com/jinzhu/gorm/dialects/kingbase/test/testutil"
 )
 
-// Transaction boundary tests intentionally live in integration/. They verify
-// behavior of database/sql transactions and the Kingbase server, not only the
-// SQL strings emitted by the dialect.
+// 事务边界测试有意放在 integration/ 下，用于验证 database/sql 事务和 KingbaseES 服务器行为，
+// 而不只是方言生成的 SQL 字符串。
 type transactionBoundaryRow struct {
 	ID    uint   `gorm:"primary_key"`
 	Name  string `gorm:"size:128;unique_index;not null"`
 	Value int    `gorm:"not null"`
 }
 
-// Used only by the DDL rollback test to add a column to an already existing
-// table inside an open transaction.
+// 仅供 DDL 回滚测试使用：在已开启事务中向现有表增加一列。
 type transactionBoundaryMigrationRow struct {
 	ID     uint `gorm:"primary_key"`
 	Marker int
@@ -172,8 +170,7 @@ func TestKingbaseDirtyReadIsNotVisible(t *testing.T) {
 			select {
 			case result = <-resultCh:
 			case <-time.After(300 * time.Millisecond):
-				// A lock wait is also acceptable; after the writer rolls back,
-				// the reader must observe the committed value 10.
+				// 等待锁同样可以接受；写事务回滚后，读事务必须看到已提交值 10。
 				if err := writer.Rollback().Error; err != nil {
 					t.Fatalf("rollback writer after lock wait: %v", err)
 				}
@@ -601,9 +598,8 @@ func TestKingbaseSavepointRollbackToAndNestedTransactionSemantics(t *testing.T) 
 			_ = outer.Rollback()
 			t.Fatalf("nested transaction error = %v, want %v", err, nestedErr)
 		}
-		// GORM V1 does not create a savepoint for a nested Transaction call
-		// when the receiver already wraps *sql.Tx. The outer transaction remains
-		// usable, so this row and the inner row commit together below.
+		// 当接收者已经包装 *sql.Tx 时，GORM V1 不会为嵌套 Transaction 调用创建保存点。
+		// 外层事务仍可使用，因此本记录与内层记录会在下方一起提交。
 		if err := outer.Table(table).Create(&transactionBoundaryRow{Name: "nested-after", Value: 6}).Error; err != nil {
 			_ = outer.Rollback()
 			t.Fatalf("continue outer transaction after nested callback: %v", err)
@@ -679,8 +675,7 @@ func TestKingbaseTransactionContextCancellationAndTimeout(t *testing.T) {
 			_ = active.Rollback()
 			t.Fatal("commit after transaction context cancellation unexpectedly succeeded")
 		}
-		// Rollback is intentionally safe after cancellation; database/sql may
-		// already have rolled it back and GORM V1 suppresses sql.ErrTxDone.
+		// 取消后再次 Rollback 应保持安全；database/sql 可能已经回滚，且 GORM V1 会忽略 sql.ErrTxDone。
 		_ = active.Rollback()
 		t.Logf("%s transaction context cancellation returned a commit error", mode)
 	})
@@ -821,8 +816,8 @@ func TestKingbaseDDLTransactionIsAtomic(t *testing.T) {
 			t.Fatalf("rollback DDL transaction: %v", err)
 		}
 
-		// The table existed before the transaction, so a metadata/count query
-		// failure is an actual test failure, never an accepted "absent table".
+		// 表在事务开始前已存在，因此元数据或计数查询失败必须判为测试失败，
+		// 绝不能当成可接受的“表不存在”。
 		if got := transactionBoundaryCount(t, db, table, rowName); got != 0 {
 			t.Fatalf("%s DDL rollback retained %d DML row(s)", mode, got)
 		}

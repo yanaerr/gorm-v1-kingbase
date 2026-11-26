@@ -2,8 +2,8 @@ package kingbase
 
 import "database/sql"
 
-// GORM V1 metadata methods return bool. Observers retain the original error;
-// no query failure may be reinterpreted as an absent object or retried away.
+// GORM V1 元数据方法只能返回 bool。观察器保存原始错误，任何查询失败都不能被解释成
+// 对象不存在，也不能通过重试静默消除。
 func (d *kingbaseOracleDialect) reportMetadataError(err error) {
 	if err != nil {
 		if observer, ok := d.db.(interface{ ReportMetadataError(error) }); ok {
@@ -13,6 +13,7 @@ func (d *kingbaseOracleDialect) reportMetadataError(err error) {
 }
 
 func (d *kingbaseOracleDialect) queryCount(query string, args ...interface{}) (int, error) {
+	// 所有 bool 元数据判断统一经过该入口，确保查询错误总能上报给连接观察器。
 	if d.db == nil {
 		return 0, sql.ErrConnDone
 	}
@@ -23,16 +24,18 @@ func (d *kingbaseOracleDialect) queryCount(query string, args ...interface{}) (i
 }
 
 func (d *kingbaseOracleDialect) currentSchema() (name string) {
+	// 使用会话 current_schema()，使 search_path 变化能够反映到未限定对象查询。
 	if d.db != nil {
 		d.reportMetadataError(d.db.QueryRow("SELECT current_schema()").Scan(&name))
 	}
 	return
 }
 
-// Kingbase documents these native catalogs in Oracle mode. Scope all lookups
-// to the actual schema, not USER_* views (which describe the logged-in owner).
-// Compare the names GORM quotes verbatim instead of folding distinct names.
+// KingbaseES Oracle 模式提供这些原生系统目录。所有查询都限定到对象实际 schema，
+// 不使用仅描述登录用户所有者的 USER_* 视图；名称按 GORM 引用后的原值比较，
+// 避免大小写折叠合并本应不同的对象。
 func (d *kingbaseOracleDialect) hasTableOracleCompat(tableName string) bool {
+	// 已限定对象按显式 schema 查询；未限定对象只在当前 schema 内查找。
 	schema, name := splitOracleIdentifierPath(tableName)
 	var (
 		count int
@@ -53,6 +56,7 @@ func (d *kingbaseOracleDialect) hasTableOracleCompat(tableName string) bool {
 }
 
 func (d *kingbaseOracleDialect) hasColumnOracleCompat(tableName, columnName string) bool {
+	// 列名是单个标识符，只清除自身引号，不参与 schema 路径拆分。
 	schema, name := splitOracleIdentifierPath(tableName)
 	columnName = cleanIdentifier(columnName)
 	var (
@@ -77,6 +81,7 @@ func (d *kingbaseOracleDialect) hasIndexOracleCompat(tableName, indexName string
 	schema, name := splitOracleIdentifierPath(tableName)
 	indexSchema, indexName := splitOracleIdentifierPath(indexName)
 	if schema != "" && indexSchema != "" && schema != indexSchema {
+		// 表和索引都显式限定且 schema 不一致时，不应跨 schema 误报同名索引。
 		return false
 	}
 	if schema == "" {
@@ -101,6 +106,7 @@ func (d *kingbaseOracleDialect) hasIndexOracleCompat(tableName, indexName string
 }
 
 func (d *kingbaseOracleDialect) hasForeignKeyOracleCompat(tableName, foreignKeyName string) bool {
+	// 约束目录可能包含其他同名类型，因此额外限定 constraint_type='FOREIGN KEY'。
 	schema, name := splitOracleIdentifierPath(tableName)
 	foreignKeyName = cleanIdentifier(foreignKeyName)
 	var (

@@ -53,7 +53,7 @@ func openKBMySQL(t *testing.T) *gorm.DB {
 	db := testutil.OpenLogged(t, kb.KbModeMySQL)
 	db = testutil.ObserveMetadata(t, db)
 	t.Log("[通过] 连接数据库并校验 MySQL 模式")
-	// Driver errors are observed independently; successful SQL stays quiet.
+	// 独立观察驱动错误，成功 SQL 保持静默。
 	db.LogMode(false)
 	return db
 }
@@ -105,8 +105,8 @@ func mysqlTestCleanup(t *testing.T, db *gorm.DB, table string) {
 	}
 }
 
-// Observe the real driver's Exec result without executing SQL a second time.
-// Embedding SQLCommon keeps metadata queries on the same underlying connection.
+// 在不重复执行 SQL 的前提下观察真实驱动的 Exec 结果；嵌入 SQLCommon 可让元数据查询
+// 继续使用同一个底层连接。
 type mysqlDDLObserver struct {
 	gorm.SQLCommon
 	t         *testing.T
@@ -501,8 +501,7 @@ func TestKingbaseMySQLMode_AdvancedCompatibility(t *testing.T) {
 		if err != nil {
 			t.Fatalf("初始化 DDL 执行观测失败: %v; 完整错误结构=%#v", err, err)
 		}
-		// ddlDB borrows db's connection; the enclosing test owns its lifetime.
-		// Driver errors are logged independently by the test driver wrapper.
+		// ddlDB 借用 db 的连接，其生命周期由外层测试负责；驱动错误由测试驱动包装器独立记录。
 		ddlDB.LogMode(false)
 		if err := ddlDB.Table(table).AutoMigrate(&KBMySQLConstraintRow{}).Error; err != nil {
 			t.Fatalf("高级表自动迁移失败: %v", err)
@@ -531,11 +530,9 @@ func TestKingbaseMySQLMode_AdvancedCompatibility(t *testing.T) {
 		if observer.execCount != beforeExecutions+1 {
 			t.Fatalf("删除索引未观测到预期的单次 Exec: 实际次数=%d", observer.execCount-beforeExecutions)
 		}
-		// Keep the driver observation as an independent check of GORM's
-		// error propagation and the database state after execution.
+		// 保留驱动观察结果，独立检查 GORM 错误传播及执行后的数据库状态。
 		removeErr := observer.lastError
-		// Inspect the database even on failure, so the log contains both the
-		// original driver error and the actual index state after execution.
+		// 即使执行失败也检查数据库，使日志同时包含原始驱动错误和执行后的真实索引状态。
 		remaining, checkErr := indexCount()
 		switch {
 		case checkErr != nil:
@@ -557,8 +554,8 @@ func TestKingbaseMySQLMode_AdvancedCompatibility(t *testing.T) {
 			MaxLength    int
 			DeclaredType string
 		}
-		// This instance reports -1 in information_schema for bounded VARCHAR.
-		// Verify the exact physical definition; do not accept arbitrary -1 lengths.
+		// 该实例在 information_schema 中把有界 VARCHAR 长度报告为 -1；因此验证精确物理定义，
+		// 不能接受任意长度为 -1 的结果。
 		query := "SELECT c.character_maximum_length AS max_length, format_type(a.atttypid,a.atttypmod) AS declared_type FROM information_schema.columns c JOIN pg_namespace n ON n.nspname=c.table_schema JOIN pg_class t ON t.relnamespace=n.oid AND t.relname=c.table_name JOIN pg_attribute a ON a.attrelid=t.oid AND a.attname=c.column_name WHERE c.table_schema=current_schema() AND c.table_name=? AND c.column_name=?"
 		if err := db.Raw(query, table, "name").Scan(&column).Error; err != nil {
 			t.Errorf("字段变更后核验失败: %v", err)

@@ -11,9 +11,8 @@ import (
 	"github.com/jinzhu/gorm/dialects/kingbase/test/testutil"
 )
 
-// These integration cases complement the dialect-only sqlmock tests. They are
-// skipped by openKBMySQL/openKBOracle when no instance is configured and run
-// against the real Kingbase modes once their DSNs are supplied.
+// 这些集成场景用于补充只验证方言 SQL 的 sqlmock 测试。未配置实例时由
+// openKBMySQL/openKBOracle 跳过；提供 DSN 后在真实 KingbaseES 模式上执行。
 type kbMySQLDialectBoundaryRow struct {
 	ID        uint    `gorm:"primary_key"`
 	MinInt    int     `gorm:"type:int"`
@@ -80,8 +79,7 @@ func TestKingbaseMySQLDialectDataBoundaries(t *testing.T) {
 		t.Fatalf("BLOB boundary mismatch: got %v, want %v", got.Payload, want.Payload)
 	}
 
-	// This asserts the MySQL-compatible dialect's zero-limit branch rather than
-	// merely checking that a Limit call can be built.
+	// 这里验证 MySQL 兼容方言 limit=0 的真实分支，而不只是确认能够构造 Limit 调用。
 	var noRows []kbMySQLDialectBoundaryRow
 	if err := db.Table(table).Limit(0).Find(&noRows).Error; err != nil {
 		t.Fatalf("zero-limit query failed: %v", err)
@@ -150,7 +148,7 @@ func TestKingbaseOracleDialectDataBoundaries(t *testing.T) {
 		t.Fatalf("Oracle NULL pointer column became non-nil: %q", *got.Nullable)
 	}
 
-	// Oracle-compatible semantics treat an empty character value as NULL.
+	// Oracle 兼容语义会把空字符值视为 NULL。
 	var emptyIsNull int
 	if err := db.Table(table).Where("empty_value IS NULL").Count(&emptyIsNull).Error; err != nil {
 		t.Fatalf("check Oracle empty-string semantics: %v", err)

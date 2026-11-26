@@ -121,9 +121,8 @@ func officialAssertAssociationCount(t *testing.T, got, want int, label string) {
 	}
 }
 
-// TestOfficialAssociationRemainingCoverage maps the association_test.go,
-// join_table_test.go, polymorphic_test.go and multi_primary_keys_test.go gaps
-// into a Kingbase-owned execution layer.
+// TestOfficialAssociationRemainingCoverage 将 association_test.go、join_table_test.go、
+// polymorphic_test.go 和 multi_primary_keys_test.go 中尚未覆盖的场景映射到 KingbaseES 执行层。
 func TestOfficialAssociationRemainingCoverage(t *testing.T) {
 	forEachMode(t, func(t *testing.T, mode kb.KbMode) {
 		db := openOfficialCoverageDB(t, mode)
@@ -384,9 +383,8 @@ func TestOfficialAssociationRemainingCoverage(t *testing.T) {
 	})
 }
 
-// TestOfficialAssociationMetadataCoverage retains the six precise relationship
-// metadata assertions from association_test.go.  They do not require a live
-// database but run through each Kingbase dialect to catch model parsing drift.
+// TestOfficialAssociationMetadataCoverage 保留 association_test.go 中六项精确关系元数据断言。
+// 它们不要求真实数据库，但会遍历每个 KingbaseES 方言以发现模型解析偏差。
 func TestOfficialAssociationMetadataCoverage(t *testing.T) {
 	forEachMode(t, func(t *testing.T, mode kb.KbMode) {
 		db := openOfficialCoverageDB(t, mode)

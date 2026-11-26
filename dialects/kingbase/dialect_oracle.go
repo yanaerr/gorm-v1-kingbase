@@ -19,10 +19,12 @@ import (
 const dialectKingbaseOracle = "kingbase-oracle"
 
 func registerKingbaseModeDialects() {
+	// 模式方言只作为统一方言的内部委托注册，应用不应直接选择这些名称。
 	gorm.RegisterDialect(dialectKingbaseMySQL, &kingbaseMySQLDialect{})
 	gorm.RegisterDialect(dialectKingbaseOracle, &kingbaseOracleDialect{})
 }
 
+// kingbaseDialectMode 只识别包内注册的两个模式方言，用于限制专用回调的作用范围。
 func kingbaseDialectMode(dialect gorm.Dialect) (KbMode, bool) {
 	if dialect == nil {
 		return "", false
@@ -37,20 +39,19 @@ func kingbaseDialectMode(dialect gorm.Dialect) (KbMode, bool) {
 	}
 }
 
-// kingbaseOracleDialect is intentionally self-contained. Oracle-mode SQL must
-// not inherit behavior from another GORM dialect.
+// kingbaseOracleDialect 是独立实现，Oracle 模式 SQL 不继承其他 GORM 方言的隐含行为。
 type kingbaseOracleDialect struct {
 	db gorm.SQLCommon
 }
 
 var _ gorm.Dialect = (*kingbaseOracleDialect)(nil)
 
+// 下列方法完整实现 GORM V1 Dialect 接口，Oracle 模式不借用其他数据库方言的 SQL。
 func (*kingbaseOracleDialect) GetName() string { return dialectKingbaseOracle }
 
 func (d *kingbaseOracleDialect) SetDB(db gorm.SQLCommon) { d.db = db }
 
-// Oracle-compatible SQL uses numbered colon bind variables. gokb accepts this
-// form and normalizes it to the wire-level placeholders expected by KingbaseES.
+// Oracle 兼容 SQL 使用带编号的冒号绑定变量；gokb 会将其归一化为 KingbaseES 协议层占位符。
 func (*kingbaseOracleDialect) BindVar(i int) string { return fmt.Sprintf(":%d", i) }
 
 func (*kingbaseOracleDialect) Quote(key string) string {
@@ -76,6 +77,7 @@ func (d *kingbaseOracleDialect) RemoveIndex(tableName, indexName string) error {
 
 	schema, _ := splitOracleIdentifierPath(tableName)
 	indexSchema, index := splitOracleIdentifierPath(indexName)
+	// 索引未显式限定 schema 时继承表 schema；若索引已限定则以索引自身为准。
 	if indexSchema == "" {
 		indexSchema = schema
 	}
@@ -117,6 +119,7 @@ func (*kingbaseOracleDialect) LastInsertIDReturningSuffix(tableName, columnName 
 func (*kingbaseOracleDialect) DefaultValueStr() string { return "DEFAULT VALUES" }
 
 func (d *kingbaseOracleDialect) BuildKeyName(kind, tableName string, fields ...string) string {
+	// 名称未超过默认 63 字节时不访问数据库；只有长名称才查询实例实际限制。
 	name := (gorm.DefaultForeignKeyNamer{}).BuildKeyName(kind, tableName, fields...)
 	if len(name) <= 63 {
 		return name
@@ -134,8 +137,8 @@ func (d *kingbaseOracleDialect) BuildKeyName(kind, tableName string, fields ...s
 	if len(name) <= limit {
 		return name
 	}
-	// Server truncation would lose the distinguishing suffix and prevent
-	// subsequent HasForeignKey/RemoveForeignKey from using the same name.
+	// 由服务器直接截断会丢失区分后缀，导致后续 HasForeignKey/RemoveForeignKey
+	// 无法复用同一名称，因此在客户端用完整名称哈希生成稳定后缀。
 	digest := sha1.Sum([]byte(name))
 	suffix := hex.EncodeToString(digest[:])
 	if limit <= len(suffix) {
@@ -154,11 +157,13 @@ func (*kingbaseOracleDialect) NormalizeIndexAndColumn(indexName, columnName stri
 
 func (d *kingbaseOracleDialect) CurrentDatabase() string { return d.currentSchema() }
 
+// quoteOracleIdentifier 为单个 Oracle 标识符增加双引号，并通过双写转义内部引号。
 func quoteOracleIdentifier(identifier string) string {
 	identifier = cleanIdentifier(identifier)
 	return `"` + strings.ReplaceAll(identifier, `"`, `""`) + `"`
 }
 
+// quoteOracleIdentifierPath 分别引用 schema 和对象名，避免把限定路径当作单一标识符。
 func quoteOracleIdentifierPath(identifier string) string {
 	schema, name := splitOracleIdentifierPath(identifier)
 	if schema == "" {
@@ -167,7 +172,7 @@ func quoteOracleIdentifierPath(identifier string) string {
 	return quoteOracleIdentifier(schema) + "." + quoteOracleIdentifier(name)
 }
 
-// A dot inside a quoted identifier belongs to the name, not the schema path.
+// 引号内的点属于标识符名称，不是 schema 路径分隔符。
 func splitOracleIdentifierPath(path string) (schema, name string) {
 	path = strings.TrimSpace(path)
 	quoted := false
@@ -185,6 +190,7 @@ func splitOracleIdentifierPath(path string) (schema, name string) {
 	return "", cleanIdentifier(path)
 }
 
+// modifyColumnOracleCompat 生成 Oracle 兼容的 ALTER TABLE ... MODIFY 语法。
 func (d *kingbaseOracleDialect) modifyColumnOracleCompat(tableName, columnName, typ string) error {
 	if d.db == nil {
 		return sql.ErrConnDone
@@ -199,6 +205,7 @@ func (d *kingbaseOracleDialect) modifyColumnOracleCompat(tableName, columnName, 
 }
 
 func limitAndOffsetOracleCompat(limit, offset interface{}) (string, error) {
+	// 先统一解析 GORM 传入的整数或字符串值，再按 Oracle 兼容语法组合分页片段。
 	var (
 		parsedLimit  int64 = -1
 		parsedOffset int64 = -1
@@ -230,14 +237,16 @@ func limitAndOffsetOracleCompat(limit, offset interface{}) (string, error) {
 	return "", nil
 }
 
-// rewriteOracleType maps common GORM field definitions to Kingbase Oracle-mode
-// types while preserving tags such as not null, unique and default.
+// rewriteOracleType 将常见 GORM 字段定义映射为 KingbaseES Oracle 模式类型，
+// 同时保留 not null、unique、default 等附加属性。
 func (d *kingbaseOracleDialect) rewriteOracleType(f *gorm.StructField) string {
 	dataValue, sqlType, size, additionalType := gorm.ParseFieldStructForDialect(f, d)
 
 	if sqlType != "" {
+		// 用户显式指定 type 时只做兼容表中声明的确定性改写。
 		sqlType = rewriteOracleExplicitType(sqlType)
 	} else {
+		// 未显式指定时依据 Go 类型、字段角色和 GORM 标签推导物理类型。
 		switch dataValue.Kind() {
 		case reflect.Bool:
 			sqlType = "boolean"
@@ -256,9 +265,8 @@ func (d *kingbaseOracleDialect) rewriteOracleType(f *gorm.StructField) string {
 			} else if dataValue.Kind() == reflect.Uint64 && !f.IsForeignKey {
 				sqlType = "number(20)"
 			} else {
-				// Kingbase cannot create a foreign key between NUMBER and a
-				// BIGINT/INTEGER identity. Keep the same native base even when
-				// a relation is added later with AddForeignKey rather than a tag.
+				// KingbaseES 无法在 NUMBER 与 BIGINT/INTEGER identity 之间创建外键。
+				// 即使关系稍后通过 AddForeignKey 添加，也要让外键字段保持相同原生基类型。
 				sqlType = base
 			}
 		case reflect.Float32:
@@ -266,6 +274,7 @@ func (d *kingbaseOracleDialect) rewriteOracleType(f *gorm.StructField) string {
 		case reflect.Float64:
 			sqlType = "binary_double"
 		case reflect.String:
+			// 未声明 SIZE 时使用 text；有界且小于 KingbaseES varchar2 边界时才生成 varchar2(n)。
 			if _, ok := f.TagSettingsGet("SIZE"); !ok {
 				size = 0
 			}
@@ -280,6 +289,7 @@ func (d *kingbaseOracleDialect) rewriteOracleType(f *gorm.StructField) string {
 			}
 		default:
 			if gorm.IsByteArrayOrSlice(dataValue) {
+				// 普通二进制值使用 bytea，只有可明确识别的 UUID/GUID 和 RawMessage 才特化。
 				sqlType = "bytea"
 				if isOracleUUID(dataValue) {
 					sqlType = "uuid"
@@ -295,8 +305,8 @@ func (d *kingbaseOracleDialect) rewriteOracleType(f *gorm.StructField) string {
 		panic(fmt.Sprintf("invalid sql type %s (%s) for kingbase oracle", dataValue.Type().Name(), dataValue.Kind().String()))
 	}
 
-	// ParseFieldStructForDialect appends the COMMENT tag last. Remove that
-	// exact suffix rather than scanning DEFAULT expressions for the word.
+	// ParseFieldStructForDialect 会把 COMMENT 标签追加在末尾。这里只删除精确的末尾片段，
+	// 不在 DEFAULT 表达式中模糊查找 COMMENT 字样。
 	if comment, ok := f.TagSettingsGet("COMMENT"); ok {
 		additionalType = strings.TrimSpace(strings.TrimSuffix(additionalType, "COMMENT "+comment))
 	}
@@ -306,6 +316,7 @@ func (d *kingbaseOracleDialect) rewriteOracleType(f *gorm.StructField) string {
 	return fmt.Sprintf("%v %v", sqlType, additionalType)
 }
 
+// isOracleUUID 仅把名称明确为 UUID/GUID 的 16 字节数组识别为 uuid，避免误判普通数组。
 func isOracleUUID(value reflect.Value) bool {
 	if value.Kind() != reflect.Array || value.Type().Len() != 16 {
 		return false
@@ -314,12 +325,15 @@ func isOracleUUID(value reflect.Value) bool {
 	return typeName == "uuid" || typeName == "guid"
 }
 
+// isOracleJSON 通过 json.RawMessage 的具体类型识别 JSON 二进制载体。
 func isOracleJSON(value reflect.Value) bool {
 	_, ok := value.Interface().(json.RawMessage)
 	return ok
 }
 
 func rewriteOracleExplicitType(sqlType string) string {
+	// 显式 type 标签先拆出基础类型和修饰部分，仅对确认兼容的类型别名进行改写，
+	// 未列出的定义原样保留，避免适配层擅自改变用户 SQL。
 	typ := strings.TrimSpace(sqlType)
 	if at := oracleTimestampTZ.FindStringIndex(typ); at != nil {
 		precision := typ[len("timestamptz"):at[1]]
@@ -375,7 +389,7 @@ func rewriteOracleExplicitType(sqlType string) string {
 			return repl.to
 		}
 		if strings.HasPrefix(lower, repl.from+"(") {
-			// Only aliases with the same parameter grammar may keep modifiers.
+			// 只有参数语法一致的别名才能保留长度、精度等修饰参数。
 			switch repl.from {
 			case "varchar2", "nvarchar2", "nvarchar", "varchar", "character varying", "varbinary", "binary", "numeric", "decimal", "datetime", "timestamptz":
 			default:
@@ -391,11 +405,13 @@ func rewriteOracleExplicitType(sqlType string) string {
 	return typ
 }
 
+// 下列模式只处理需要重新排列参数或关键字的显式类型，普通别名由映射表处理。
 var oracleTimestampTZ = regexp.MustCompile(`(?i)^timestamptz\s*\(\s*\d+\s*\)`)
 var oracleFloatScale = regexp.MustCompile(`(?i)^float\s*\(\s*(\d+)\s*,\s*(\d+)\s*\)(\s.*)?$`)
 var oracleYearType = regexp.MustCompile(`(?i)^year(?:\s*\(\s*4\s*\))?(\s.*)?$`)
 
 func kingbaseFieldCanAutoIncrement(field *gorm.StructField) bool {
+	// 显式关闭 AUTO_INCREMENT 时优先尊重用户设置；其余情况沿用 GORM 对主键整数的判断。
 	if value, ok := field.TagSettingsGet("AUTO_INCREMENT"); ok {
 		return strings.ToLower(value) != "false"
 	}
